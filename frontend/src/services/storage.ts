@@ -1,4 +1,4 @@
-import { CartItem, Order } from './types';
+import { CartItem, Order } from '@/models';
 
 const STORAGE_KEYS = {
   CARD: 'kantin_pos_card',

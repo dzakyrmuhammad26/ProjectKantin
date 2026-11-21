@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React from 'react';
 import { Menu } from '@/models/types';
-import { formatRupiah } from '@/models/formatters';
+import { formatRupiah } from '@/utils';
 import { Stepper } from './Stepper';
 
 export interface KartuMenuProps {

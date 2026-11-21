@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CartItem, Gerai } from '@/models/types';
-import { formatRupiah } from '@/models/formatters';
+import { formatRupiah } from '@/utils';
 
 export interface RingkasanPesananViewProps {
   itemsByGerai: Record<string, CartItem[]>;

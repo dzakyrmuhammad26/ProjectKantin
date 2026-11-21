@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { GERAI_LIST, MENU_ITEMS } from '@/models/menuData';
+import { GERAI_LIST, MENU_ITEMS } from '@/data';
 import { TabItem } from '@/components/Tabs';
 import { useCart } from './CartContext';
 

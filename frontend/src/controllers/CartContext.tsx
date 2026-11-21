@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { CartItem, Menu } from '@/models/types';
-import { storage } from '@/models/storage';
+import { storage } from '@/services';
 
 export interface CartContextType {
   cardNumber: string;
