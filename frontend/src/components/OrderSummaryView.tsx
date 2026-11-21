@@ -1,34 +1,34 @@
 'use client';
 
 import React from 'react';
-import { CartItem, Gerai } from '@/models/types';
-import { formatRupiah } from '@/utils';
+import { CartItem, Stall } from '@/models';
+import { formatCurrency } from '@/utils';
 
-export interface RingkasanPesananViewProps {
-  itemsByGerai: Record<string, CartItem[]>;
-  geraiMap: Map<string, Gerai>;
+export interface OrderSummaryViewProps {
+  itemsByStall: Record<string, CartItem[]>;
+  stallMap: Map<string, Stall>;
   totalAmount: number;
   totalCount?: number;
   title?: string;
 }
 
-export function RingkasanPesananView({
-  itemsByGerai,
-  geraiMap,
+export function OrderSummaryView({
+  itemsByStall,
+  stallMap,
   totalAmount,
   totalCount,
   title = 'Rincian Pesanan per Gerai',
-}: RingkasanPesananViewProps) {
+}: OrderSummaryViewProps) {
   return (
     <div className="flex flex-col gap-4">
       <span className="text-[12px] font-bold uppercase tracking-wider text-muted block">
         {title}
       </span>
 
-      {Object.entries(itemsByGerai).map(([geraiId, stallItems]) => {
-        const gerai = geraiMap.get(geraiId);
-        const stallColor = gerai?.color || '#0F766E';
-        const stallName = gerai?.name || geraiId;
+      {Object.entries(itemsByStall).map(([stallId, stallItems]) => {
+        const stall = stallMap.get(stallId);
+        const stallColor = stall?.color || '#0F766E';
+        const stallName = stall?.name || stallId;
         const stallSubtotal = stallItems.reduce(
           (sum, item) => sum + item.menuItem.price * item.qty,
           0
@@ -36,10 +36,10 @@ export function RingkasanPesananView({
 
         return (
           <div
-            key={geraiId}
+            key={stallId}
             className="border border-line rounded-lg overflow-hidden bg-white"
           >
-            {/* Header Gerai: Batang vertikal warna gerai 6px + Nama Gerai + Subtotal */}
+            {/* Stall Header */}
             <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-line">
               <div className="flex items-center gap-2">
                 <span
@@ -50,15 +50,15 @@ export function RingkasanPesananView({
                   {stallName}
                 </span>
                 <span className="text-[12px] text-muted">
-                  ({gerai?.code || geraiId})
+                  ({stall?.code || stallId})
                 </span>
               </div>
               <span className="text-[13px] font-semibold text-ink font-mono tabular-nums">
-                {formatRupiah(stallSubtotal)}
+                {formatCurrency(stallSubtotal)}
               </span>
             </div>
 
-            {/* Daftar Menu di Gerai Ini */}
+            {/* Menu Items in this Stall */}
             <div className="divide-y divide-line">
               {stallItems.map((cartItem) => (
                 <div
@@ -81,7 +81,7 @@ export function RingkasanPesananView({
                     </div>
                   </div>
                   <span className="text-[14px] font-semibold text-ink font-mono tabular-nums shrink-0">
-                    {formatRupiah(cartItem.menuItem.price * cartItem.qty)}
+                    {formatCurrency(cartItem.menuItem.price * cartItem.qty)}
                   </span>
                 </div>
               ))}
@@ -90,7 +90,7 @@ export function RingkasanPesananView({
         );
       })}
 
-      {/* Total Keseluruhan */}
+      {/* Grand Total */}
       <div className="border-t border-line pt-4 flex items-baseline justify-between">
         <div>
           <span className="text-[12px] font-bold uppercase tracking-wider text-muted block">
@@ -98,16 +98,16 @@ export function RingkasanPesananView({
           </span>
           {typeof totalCount === 'number' && (
             <span className="text-[12px] text-muted">
-              Termasuk {totalCount} pesanan dari {Object.keys(itemsByGerai).length} gerai
+              Termasuk {totalCount} pesanan dari {Object.keys(itemsByStall).length} gerai
             </span>
           )}
         </div>
         <span className="text-[20px] font-extrabold text-ink font-mono tabular-nums">
-          {formatRupiah(totalAmount)}
+          {formatCurrency(totalAmount)}
         </span>
       </div>
     </div>
   );
 }
 
-export default RingkasanPesananView;
+export default OrderSummaryView;

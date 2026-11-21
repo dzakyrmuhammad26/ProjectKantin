@@ -2,11 +2,11 @@
 
 /* eslint-disable @next/next/no-img-element */
 import React from 'react';
-import { Menu } from '@/models/types';
-import { formatRupiah } from '@/utils';
+import { Menu } from '@/models';
+import { formatCurrency } from '@/utils';
 import { Stepper } from './Stepper';
 
-export interface KartuMenuProps {
+export interface MenuCardProps {
   item: Menu;
   qty?: number;
   onQtyChange?: (newQty: number) => void;
@@ -14,17 +14,17 @@ export interface KartuMenuProps {
   onDecrement?: () => void;
 }
 
-export function KartuMenu({
+export function MenuCard({
   item,
   qty = 0,
   onQtyChange,
   onIncrement,
   onDecrement,
-}: KartuMenuProps) {
+}: MenuCardProps) {
   const isSelected = qty > 0;
   const isSoldOut = Boolean(item.isSoldOut);
 
-  // Placeholder kotak abu #F1F1EF bila gambar belum tersedia
+  // Placeholder grey box when image is not available
   const placeholderImg =
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="104" height="104" viewBox="0 0 104 104"><rect width="104" height="104" fill="%23F1F1EF"/></svg>';
 
@@ -48,7 +48,7 @@ export function KartuMenu({
           : 'border-line hover:border-slate-300'
       } ${isSoldOut ? 'opacity-60 bg-slate-50/50' : ''}`}
     >
-      {/* Foto kotak 104x104 sudut 8px */}
+      {/* Photo 104x104 with 8px radius */}
       <div className="w-[104px] h-[104px] rounded-[8px] bg-[#F1F1EF] shrink-0 overflow-hidden relative">
         <img
           src={item.image || placeholderImg}
@@ -66,7 +66,7 @@ export function KartuMenu({
         />
       </div>
 
-      {/* Info Menu & Aksi */}
+      {/* Menu Info & Actions */}
       <div className="flex flex-col justify-between flex-1 min-w-0">
         <div>
           <h3
@@ -81,14 +81,14 @@ export function KartuMenu({
           </span>
         </div>
 
-        {/* Baris Bawah: Harga di kiri, Stepper di kanan */}
+        {/* Bottom Row: Price left, Stepper right */}
         <div className="flex items-center justify-between mt-2 pt-1">
           <span
             className={`text-[16px] font-bold ${
               isSoldOut ? 'text-muted' : 'text-ink'
             }`}
           >
-            {formatRupiah(item.price)}
+            {formatCurrency(item.price)}
           </span>
 
           {isSoldOut ? (
@@ -107,4 +107,4 @@ export function KartuMenu({
   );
 }
 
-export default KartuMenu;
+export default MenuCard;

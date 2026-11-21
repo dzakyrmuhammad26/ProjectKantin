@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CartItem, Gerai } from '@/models/types';
-import { formatRupiah } from '@/utils';
+import { CartItem, Stall } from '@/models';
+import { formatCurrency } from '@/utils';
 import { Button } from './Button';
-import { NomorPelangganInput } from './NomorPelangganInput';
+import { CustomerNumberInput } from './CustomerNumberInput';
 
-export interface KeranjangViewProps {
+export interface CartViewProps {
   cardNumber: string;
   onCardNumberChange?: (val: string) => void;
   cardError?: string | null;
   items: CartItem[];
-  itemsByGerai: Record<string, CartItem[]>;
-  geraiMap: Map<string, Gerai>;
+  itemsByStall: Record<string, CartItem[]>;
+  stallMap: Map<string, Stall>;
   totalCount: number;
   totalAmount: number;
   onCheckout: () => void;
@@ -22,13 +22,13 @@ export interface KeranjangViewProps {
   onUpdateNotes: (menuItemId: string, notes: string) => void;
 }
 
-export function KeranjangView({
+export function CartView({
   cardNumber,
   onCardNumberChange,
   cardError,
   items,
-  itemsByGerai,
-  geraiMap,
+  itemsByStall,
+  stallMap,
   totalCount,
   totalAmount,
   onCheckout,
@@ -36,13 +36,13 @@ export function KeranjangView({
   onIncrement,
   onDecrement,
   onUpdateNotes,
-}: KeranjangViewProps) {
+}: CartViewProps) {
   const [activeNoteItemId, setActiveNoteItemId] = useState<string | null>(null);
 
   return (
     <aside className="sticky top-[80px] w-full">
       <div className="rounded-[12px] border border-line bg-white p-5 shadow-none">
-        {/* Header Keranjang */}
+        {/* Cart Header */}
         <div className="border-b border-line pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -54,13 +54,13 @@ export function KeranjangView({
               )}
             </div>
 
-            {/* Tombol Kosongkan Keranjang: Ikon tempat sampah fungsional */}
+            {/* Clear Cart Button */}
             {items.length > 0 && (
               <button
                 type="button"
                 onClick={onClearCart}
                 title="Kosongkan keranjang"
-                aria-label="Kosongkan keranjang"
+                aria-label="Clear cart"
                 className="text-faint transition-colors hover:text-status-cancel"
               >
                 <svg
@@ -90,21 +90,21 @@ export function KeranjangView({
           </p>
         </div>
 
-        {/* Isi Keranjang atau State Kosong */}
+        {/* Cart Items or Empty State */}
         {items.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-[14px] text-faint">Belum ada pesanan</p>
           </div>
         ) : (
           <div className="max-h-[calc(100vh-340px)] divide-y divide-line overflow-y-auto py-3">
-            {Object.entries(itemsByGerai).map(([geraiId, stallItems]) => {
-              const geraiInfo = geraiMap.get(geraiId);
-              const stallColor = geraiInfo?.color || '#0F766E';
-              const stallName = geraiInfo?.name || geraiId;
+            {Object.entries(itemsByStall).map(([stallId, stallItems]) => {
+              const stallInfo = stallMap.get(stallId);
+              const stallColor = stallInfo?.color || '#0F766E';
+              const stallName = stallInfo?.name || stallId;
 
               return (
-                <div key={geraiId} className="py-3 first:pt-1 last:pb-1">
-                  {/* Header Gerai dalam Keranjang: Batang warna 6px */}
+                <div key={stallId} className="py-3 first:pt-1 last:pb-1">
+                  {/* Stall Header in Cart */}
                   <div className="mb-2 flex items-center gap-2">
                     <span
                       className="inline-block h-3.5 w-1.5 rounded-full"
@@ -115,7 +115,7 @@ export function KeranjangView({
                     </span>
                   </div>
 
-                  {/* Daftar Item Menu di Gerai ini */}
+                  {/* Menu Items in this Stall */}
                   <div className="space-y-2.5 pl-3.5">
                     {stallItems.map((cartItem) => {
                       const isEditingNote = activeNoteItemId === cartItem.menuItem.id;
@@ -129,7 +129,7 @@ export function KeranjangView({
                               </span>
                             </div>
 
-                            {/* Kontrol Qty Kecil di Keranjang */}
+                            {/* Qty Controls */}
                             <div className="flex items-center gap-1.5 shrink-0">
                               <button
                                 type="button"
@@ -150,13 +150,13 @@ export function KeranjangView({
                               </button>
                             </div>
 
-                            {/* Subtotal Item */}
+                            {/* Item Subtotal */}
                             <span className="w-20 text-right font-mono font-semibold text-ink tabular-nums">
-                              {formatRupiah(cartItem.menuItem.price * cartItem.qty)}
+                              {formatCurrency(cartItem.menuItem.price * cartItem.qty)}
                             </span>
                           </div>
 
-                          {/* Tombol & Input Catatan */}
+                          {/* Notes Input */}
                           <div className="mt-1">
                             {isEditingNote ? (
                               <div className="flex gap-1.5 pt-1">
@@ -206,27 +206,27 @@ export function KeranjangView({
           </div>
         )}
 
-        {/* Ringkasan Biaya, Input Nomor Pelanggan, & Total */}
+        {/* Cost Summary, Customer Number Input, & Total */}
         <div className="mt-3 border-t border-line pt-3 space-y-3">
           <div className="flex items-baseline justify-between py-1">
             <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
               Total Tagihan
             </span>
             <span className="font-mono text-[20px] font-extrabold text-ink tabular-nums">
-              {formatRupiah(totalAmount)}
+              {formatCurrency(totalAmount)}
             </span>
           </div>
 
-          {/* Controlled Component: Input Nomor Pelanggan */}
+          {/* Customer Number Input */}
           <div className="rounded-[8px] bg-slate-50 p-3 border border-line">
-            <NomorPelangganInput
+            <CustomerNumberInput
               value={cardNumber}
               onChange={(val) => onCardNumberChange?.(val)}
               error={cardError}
             />
           </div>
 
-          {/* Tombol Checkout Utama */}
+          {/* Checkout Button */}
           <div className="pt-1">
             <Button
               variant="primary"
@@ -244,4 +244,4 @@ export function KeranjangView({
   );
 }
 
-export default KeranjangView;
+export default CartView;

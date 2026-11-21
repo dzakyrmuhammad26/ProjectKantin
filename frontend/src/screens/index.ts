@@ -1,3 +1,2 @@
-export * from './MenuScreen';
-export * from './KonfirmasiScreen';
-export * from './SelesaiScreen';
+export * from './customer';
+export * from './cashier';

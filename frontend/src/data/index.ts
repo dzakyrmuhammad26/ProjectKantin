@@ -1,2 +1,2 @@
-export * from './geraiData';
+export * from './stallData';
 export * from './menuData';

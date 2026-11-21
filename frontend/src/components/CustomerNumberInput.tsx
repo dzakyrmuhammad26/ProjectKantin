@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-export interface NomorPelangganInputProps {
+export interface CustomerNumberInputProps {
   value: string;
   onChange: (value: string) => void;
   error?: string | null;
@@ -12,7 +12,7 @@ export interface NomorPelangganInputProps {
   className?: string;
 }
 
-export function NomorPelangganInput({
+export function CustomerNumberInput({
   value,
   onChange,
   error,
@@ -20,7 +20,7 @@ export function NomorPelangganInput({
   disabled = false,
   id = 'customer-number-input',
   className = '',
-}: NomorPelangganInputProps) {
+}: CustomerNumberInputProps) {
   return (
     <div className={`flex flex-col gap-1.5 w-full ${className}`}>
       <div className="flex items-center justify-between">
@@ -65,4 +65,4 @@ export function NomorPelangganInput({
   );
 }
 
-export default NomorPelangganInput;
+export default CustomerNumberInput;

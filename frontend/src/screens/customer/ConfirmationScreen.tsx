@@ -1,26 +1,62 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { Navbar, PageContainer, Panel, Button, RingkasanPesananView } from '@/components';
-import { useOrderController } from '@/controllers/useOrderController';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { Navbar, PageContainer, Panel, Button, OrderSummaryView } from '@/components';
+import { Stall } from '@/models';
+import { orderController, stallController } from '@/controllers';
+import { useCart } from '@/context';
 
-export function KonfirmasiScreen() {
+export function ConfirmationScreen() {
+  const router = useRouter();
   const {
     cardNumber,
     items,
-    itemsByGerai,
+    itemsByStall,
     totalAmount,
     totalCount,
-    geraiMap,
     isInitialized,
-    checkEmptyCartRedirect,
-    handleKirimPesanan,
-    handleUbahPesanan,
-  } = useOrderController();
+    clearCart,
+  } = useCart();
 
+  const [stalls, setStalls] = useState<Stall[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load stalls for header/colors
   useEffect(() => {
-    checkEmptyCartRedirect();
-  }, [checkEmptyCartRedirect]);
+    stallController.getStalls().then(setStalls);
+  }, []);
+
+  const stallMap = useMemo(() => {
+    return stallController.getStallMap(stalls);
+  }, [stalls]);
+
+  // Redirect if cart is empty
+  useEffect(() => {
+    if (isInitialized && items.length === 0 && !isSubmitting) {
+      router.replace('/order');
+    }
+  }, [isInitialized, items.length, isSubmitting, router]);
+
+  // Submit order through orderController
+  const handleSubmitOrder = async () => {
+    if (items.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      await orderController.createOrder(cardNumber, items, totalAmount);
+      clearCart();
+      router.push('/order/complete');
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengirim pesanan');
+      setIsSubmitting(false);
+    }
+  };
+
+  // Back to edit order in menu
+  const handleEditOrder = () => {
+    router.push(cardNumber ? `/order?card=${encodeURIComponent(cardNumber)}` : '/order');
+  };
 
   if (!isInitialized || items.length === 0) {
     return (
@@ -42,7 +78,7 @@ export function KonfirmasiScreen() {
       <PageContainer>
         <div className="max-w-[588px] mx-auto">
           <Panel className="p-6 flex flex-col gap-6">
-            {/* Header Panel */}
+            {/* Panel Header */}
             <div className="border-b border-line pb-4 flex items-start justify-between">
               <div>
                 <h1 className="text-[20px] font-semibold text-ink leading-tight">
@@ -59,15 +95,15 @@ export function KonfirmasiScreen() {
               </div>
             </div>
 
-            {/* Ringkasan Pesanan per Gerai */}
-            <RingkasanPesananView
-              itemsByGerai={itemsByGerai}
-              geraiMap={geraiMap}
+            {/* Order Summary by Stall */}
+            <OrderSummaryView
+              itemsByStall={itemsByStall}
+              stallMap={stallMap}
               totalAmount={totalAmount}
               totalCount={totalCount}
             />
 
-            {/* Informasi Pembayaran (Notice Box) */}
+            {/* Payment Instructions */}
             <div className="border border-line bg-slate-50 rounded-lg p-4 flex flex-col gap-1.5">
               <span className="text-[14px] font-semibold text-ink">
                 Petunjuk Pembayaran
@@ -79,20 +115,22 @@ export function KonfirmasiScreen() {
               </p>
             </div>
 
-            {/* Dua Tombol Aksi */}
+            {/* Action Buttons */}
             <div className="flex flex-col gap-2.5 pt-1">
               <Button
                 variant="primary"
                 size="large"
                 fullWidth
-                onClick={handleKirimPesanan}
+                disabled={isSubmitting}
+                onClick={handleSubmitOrder}
               >
-                Kirim pesanan
+                {isSubmitting ? 'Mengirim...' : 'Kirim pesanan'}
               </Button>
               <Button
                 variant="secondary"
                 fullWidth
-                onClick={handleUbahPesanan}
+                disabled={isSubmitting}
+                onClick={handleEditOrder}
               >
                 Ubah pesanan
               </Button>

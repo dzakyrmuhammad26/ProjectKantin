@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusType } from '@/models/types';
+import { StatusType } from '@/models';
 
 interface StatusLabelProps {
   status: StatusType;

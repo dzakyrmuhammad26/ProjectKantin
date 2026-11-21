@@ -1,6 +1,6 @@
-import { Gerai } from '@/models';
+import { Stall } from '@/models';
 
-export const GERAI_LIST: Gerai[] = [
+export const STALL_LIST: Stall[] = [
   {
     id: 'G01',
     code: 'G01',
