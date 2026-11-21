@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-50: #F0FDFA;
+  --brand-700: #0F766E;
+  --brand-800: #115E59;
+  --surface: #F8F9FA;
+  --line: #E2E8F0;
+  --ink: #1F2937;
+  --muted: #64748B;
+  --faint: #94A3B8;
+  --st-wait: #D97706;
+  --st-paid: #059669;
+  --st-done: #64748B;
+  --st-cancel: #DC2626;
+  --g01: #F97316;
+  --g02: #F43F5E;
+  --g03: #9333EA;
+  --g04: #059669;
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Transisi sesuai spesifikasi: 150ms hanya untuk border dan latar */
+button, input, a {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}

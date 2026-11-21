@@ -1,0 +1,183 @@
+import { Gerai, Menu } from './types';
+
+export const GERAI_LIST: Gerai[] = [
+  {
+    id: 'G01',
+    code: 'G01',
+    name: 'Pempek Cik Ani',
+    color: '#F97316', // orange
+  },
+  {
+    id: 'G02',
+    code: 'G02',
+    name: 'Mie Celor 26',
+    color: '#F43F5E', // rose
+  },
+  {
+    id: 'G03',
+    code: 'G03',
+    name: 'Nasi Goreng Bang Rudi',
+    color: '#9333EA', // purple
+  },
+  {
+    id: 'G04',
+    code: 'G04',
+    name: 'Es Teh & Jus',
+    color: '#059669', // emerald
+  },
+];
+
+export const MENU_ITEMS: Menu[] = [
+  // G01 - Pempek Cik Ani
+  {
+    id: 'g01-001',
+    code: 'G01-001',
+    name: 'Pempek Kapal Selam',
+    price: 25000,
+    geraiId: 'G01',
+    geraiName: 'Pempek Cik Ani',
+    image: '/images/menu/g01-001.jpg',
+  },
+  {
+    id: 'g01-002',
+    code: 'G01-002',
+    name: 'Pempek Lenjer Besar',
+    price: 22000,
+    geraiId: 'G01',
+    geraiName: 'Pempek Cik Ani',
+    image: '/images/menu/g01-002.jpg',
+  },
+  {
+    id: 'g01-003',
+    code: 'G01-003',
+    name: 'Pempek Adaan',
+    price: 18000,
+    geraiId: 'G01',
+    geraiName: 'Pempek Cik Ani',
+    image: '/images/menu/g01-003.jpg',
+  },
+  {
+    id: 'g01-004',
+    code: 'G01-004',
+    name: 'Pempek Kulit Crispy',
+    price: 18000,
+    geraiId: 'G01',
+    geraiName: 'Pempek Cik Ani',
+    image: '/images/menu/g01-004.jpg',
+    isSoldOut: true,
+  },
+
+  // G02 - Mie Celor 26
+  {
+    id: 'g02-001',
+    code: 'G02-001',
+    name: 'Mie Celor Spesial Telur',
+    price: 28000,
+    geraiId: 'G02',
+    geraiName: 'Mie Celor 26',
+    image: '/images/menu/g02-001.jpg',
+  },
+  {
+    id: 'g02-002',
+    code: 'G02-002',
+    name: 'Mie Celor Udang',
+    price: 35000,
+    geraiId: 'G02',
+    geraiName: 'Mie Celor 26',
+    image: '/images/menu/g02-002.jpg',
+  },
+  {
+    id: 'g02-003',
+    code: 'G02-003',
+    name: 'Mie Celor Biasa',
+    price: 22000,
+    geraiId: 'G02',
+    geraiName: 'Mie Celor 26',
+    image: '/images/menu/g02-003.jpg',
+  },
+  {
+    id: 'g02-004',
+    code: 'G02-004',
+    name: 'Mie Celor Komplit',
+    price: 38000,
+    geraiId: 'G02',
+    geraiName: 'Mie Celor 26',
+    image: '/images/menu/g02-004.jpg',
+  },
+
+  // G03 - Nasi Goreng Bang Rudi
+  {
+    id: 'g03-001',
+    code: 'G03-001',
+    name: 'Nasi Goreng Spesial',
+    price: 25000,
+    geraiId: 'G03',
+    geraiName: 'Nasi Goreng Bang Rudi',
+    image: '/images/menu/g03-001.jpg',
+  },
+  {
+    id: 'g03-002',
+    code: 'G03-002',
+    name: 'Nasi Goreng Seafood',
+    price: 30000,
+    geraiId: 'G03',
+    geraiName: 'Nasi Goreng Bang Rudi',
+    image: '/images/menu/g03-002.jpg',
+  },
+  {
+    id: 'g03-003',
+    code: 'G03-003',
+    name: 'Nasi Goreng Gila',
+    price: 28000,
+    geraiId: 'G03',
+    geraiName: 'Nasi Goreng Bang Rudi',
+    image: '/images/menu/g03-003.jpg',
+  },
+  {
+    id: 'g03-004',
+    code: 'G03-004',
+    name: 'Nasi Goreng Kampung',
+    price: 20000,
+    geraiId: 'G03',
+    geraiName: 'Nasi Goreng Bang Rudi',
+    image: '/images/menu/g03-004.jpg',
+  },
+
+  // G04 - Es Teh & Jus
+  {
+    id: 'g04-001',
+    code: 'G04-001',
+    name: 'Es Teh Manis Jumbo',
+    price: 6000,
+    geraiId: 'G04',
+    geraiName: 'Es Teh & Jus',
+    image: '/images/menu/g04-001.jpg',
+  },
+  {
+    id: 'g04-002',
+    code: 'G04-002',
+    name: 'Jus Alpukat Keruk',
+    price: 15000,
+    geraiId: 'G04',
+    geraiName: 'Es Teh & Jus',
+    image: '/images/menu/g04-002.jpg',
+  },
+  {
+    id: 'g04-003',
+    code: 'G04-003',
+    name: 'Jus Mangga Harum Manis',
+    price: 14000,
+    geraiId: 'G04',
+    geraiName: 'Es Teh & Jus',
+    image: '/images/menu/g04-003.jpg',
+  },
+  {
+    id: 'g04-004',
+    code: 'G04-004',
+    name: 'Es Jeruk Peras',
+    price: 10000,
+    geraiId: 'G04',
+    geraiName: 'Es Teh & Jus',
+    image: '/images/menu/g04-004.jpg',
+  },
+];
