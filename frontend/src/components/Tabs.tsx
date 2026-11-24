@@ -30,7 +30,7 @@ export function Tabs({
   };
 
   return (
-    <div className={`border-b border-line flex items-center gap-6 overflow-x-auto ${className}`}>
+    <div className={`border-b border-line flex items-center gap-4 sm:gap-6 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 ${className}`}>
       {tabs.map((tab) => {
         const isActive = tab.id === currentActive;
         return (
@@ -38,7 +38,7 @@ export function Tabs({
             key={tab.id}
             type="button"
             onClick={() => handleSelect(tab.id)}
-            className={`pb-3 text-[14px] transition-colors whitespace-nowrap focus:outline-none ${
+            className={`pb-3 text-[13px] sm:text-[14px] transition-colors whitespace-nowrap shrink-0 focus:outline-none ${
               isActive
                 ? 'text-brand-700 font-semibold border-b-2 border-brand-700 -mb-px'
                 : 'text-muted hover:text-ink font-medium'
@@ -46,7 +46,7 @@ export function Tabs({
           >
             {tab.label}
             {typeof tab.count === 'number' && (
-              <span className="ml-1.5 text-[12px] opacity-75">({tab.count})</span>
+              <span className="ml-1.5 text-[11px] sm:text-[12px] opacity-75">({tab.count})</span>
             )}
           </button>
         );

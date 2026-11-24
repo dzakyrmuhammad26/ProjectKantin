@@ -1,4 +1,4 @@
-import { CashierScreen } from '@/screens/cashier';
+import { CashierScreen } from '@/screens/cashier/CashierScreen';
 
 export const metadata = {
   title: 'Kasir Sentral — Kantin POS',

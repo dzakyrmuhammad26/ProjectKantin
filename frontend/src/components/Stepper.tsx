@@ -33,14 +33,14 @@ export function Stepper({
   };
 
   return (
-    <div className="flex items-center gap-1.5 h-[44px]">
+    <div className="flex items-center gap-1 sm:gap-1.5 h-6 sm:h-[44px]">
       {/* Tombol Minus */}
       <button
         type="button"
         disabled={disabled || isZero}
         onClick={handleDecrement}
         aria-label="Kurangi jumlah"
-        className={`w-[44px] h-[44px] rounded-[8px] flex items-center justify-center font-bold text-[18px] transition-colors ${
+        className={`w-6 h-6 sm:w-[44px] sm:h-[44px] rounded-[5px] sm:rounded-[8px] flex items-center justify-center font-bold text-[12px] sm:text-[18px] transition-colors ${
           disabled || isZero
             ? 'bg-white border border-line text-slate-300 cursor-not-allowed opacity-50'
             : 'bg-white border border-brand-700 text-brand-700 hover:bg-brand-50 cursor-pointer active:bg-brand-50'
@@ -51,7 +51,7 @@ export function Stepper({
 
       {/* Nilai Jumlah */}
       <span
-        className={`w-8 text-center text-[16px] select-none font-semibold ${
+        className={`w-4 sm:w-8 text-center text-[11px] sm:text-[16px] select-none font-semibold ${
           isZero ? 'text-slate-400 font-normal' : 'text-ink'
         }`}
       >
@@ -64,7 +64,7 @@ export function Stepper({
         disabled={disabled || isMax}
         onClick={handleIncrement}
         aria-label="Tambah jumlah"
-        className={`w-[44px] h-[44px] rounded-[8px] bg-brand-700 text-white flex items-center justify-center font-bold text-[18px] transition-colors ${
+        className={`w-6 h-6 sm:w-[44px] sm:h-[44px] rounded-[5px] sm:rounded-[8px] bg-brand-700 text-white flex items-center justify-center font-bold text-[12px] sm:text-[18px] transition-colors ${
           disabled || isMax
             ? 'opacity-50 cursor-not-allowed'
             : 'hover:bg-brand-800 active:bg-brand-800 cursor-pointer'

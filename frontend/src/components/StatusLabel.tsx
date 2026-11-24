@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusType } from '@/models';
+import { StatusType } from '@/models/pesanan';
 
 interface StatusLabelProps {
   status: StatusType;
@@ -12,7 +12,15 @@ const statusConfig: Record<StatusType, { color: string; defaultLabel: string }> 
     color: '#D97706',
     defaultLabel: 'Menunggu bayar',
   },
+  menunggu: {
+    color: '#D97706',
+    defaultLabel: 'Menunggu bayar',
+  },
   paid: {
+    color: '#059669',
+    defaultLabel: 'Siap dibuat',
+  },
+  lunas: {
     color: '#059669',
     defaultLabel: 'Siap dibuat',
   },
@@ -20,7 +28,15 @@ const statusConfig: Record<StatusType, { color: string; defaultLabel: string }> 
     color: '#64748B',
     defaultLabel: 'Selesai',
   },
+  selesai: {
+    color: '#64748B',
+    defaultLabel: 'Selesai',
+  },
   cancel: {
+    color: '#DC2626',
+    defaultLabel: 'Batal',
+  },
+  batal: {
     color: '#DC2626',
     defaultLabel: 'Batal',
   },

@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Order, Stall } from '@/models';
-import { formatCurrency } from '@/utils';
+import { Order } from '@/models/pesanan';
+import { Stall } from '@/models/gerai';
+import { formatCurrency } from '@/utils/formatters';
 import { Button } from './Button';
 
 export interface ReceiptModalProps {
@@ -39,7 +40,6 @@ export function ReceiptModal({
         {/* Header Modal (Non-printable) */}
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5 print:hidden">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🧾</span>
             <h3 className="text-[16px] font-bold text-ink">
               Pratinjau Struk &amp; Tiket Dapur
             </h3>
@@ -223,7 +223,7 @@ export function ReceiptModal({
             Tutup
           </Button>
           <Button variant="primary" onClick={handlePrint}>
-            🖨️ Cetak Struk Sekarang
+            Cetak Struk Sekarang
           </Button>
         </div>
       </div>

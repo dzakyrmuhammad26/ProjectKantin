@@ -1,119 +1,29 @@
-import { CartItem, Order } from '@/models';
+import { CartItem, Order } from '@/models/pesanan';
+import { Menu } from '@/models/menu';
+import { Gerai } from '@/models/gerai';
+import { Pengguna } from '@/models/pengguna';
+import { SesiPelanggan } from '@/models/sesi';
+import { DetailPembayaran } from '@/models/pembayaran';
+import { DAFTAR_PESANAN_AWAL } from '@/data/pesananData';
+import { DAFTAR_MENU } from '@/data/menuData';
+import { DAFTAR_GERAI } from '@/data/geraiData';
+import { DAFTAR_PENGGUNA } from '@/data/penggunaData';
+import { DAFTAR_SESI_KARTU } from '@/data/sesiData';
 
 const STORAGE_KEYS = {
   CARD: 'kantin_pos_card',
   CART: 'kantin_pos_cart',
   LAST_ORDER: 'kantin_pos_last_order',
   ORDERS: 'kantin_pos_orders',
+  MENUS: 'kantin_pos_menus',
+  GERAI: 'kantin_pos_gerai',
+  PENGGUNA: 'kantin_pos_pengguna',
+  SESI: 'kantin_pos_sesi',
+  PEMBAYARAN: 'kantin_pos_pembayaran',
+  CURRENT_USER: 'kantin_pos_current_user',
 } as const;
 
-// Initial sample orders for simulation
-const INITIAL_MOCK_ORDERS: Order[] = [
-  {
-    id: 'TRX-1201',
-    cardNumber: '12',
-    total: 31000,
-    status: 'pending_payment',
-    createdAt: '14:05 WIB',
-    items: [
-      {
-        menuItem: {
-          id: 'g01-001',
-          code: 'G01-001',
-          name: 'Pempek Kapal Selam',
-          price: 25000,
-          stallId: 'G01',
-          stallName: 'Pempek Cik Ani',
-        },
-        qty: 1,
-        notes: 'Cuko pedas',
-      },
-      {
-        menuItem: {
-          id: 'g04-001',
-          code: 'G04-001',
-          name: 'Es Teh Manis Jumbo',
-          price: 6000,
-          stallId: 'G04',
-          stallName: 'Es Teh & Jus',
-        },
-        qty: 1,
-      },
-    ],
-  },
-  {
-    id: 'TRX-0588',
-    cardNumber: '05',
-    total: 43000,
-    status: 'pending_payment',
-    createdAt: '14:12 WIB',
-    items: [
-      {
-        menuItem: {
-          id: 'g02-001',
-          code: 'G02-001',
-          name: 'Mie Celor Spesial Telur',
-          price: 28000,
-          stallId: 'G02',
-          stallName: 'Mie Celor 26',
-        },
-        qty: 1,
-      },
-      {
-        menuItem: {
-          id: 'g04-002',
-          code: 'G04-002',
-          name: 'Jus Alpukat Keruk',
-          price: 15000,
-          stallId: 'G04',
-          stallName: 'Es Teh & Jus',
-        },
-        qty: 1,
-        notes: 'Gula sedikit saja',
-      },
-    ],
-  },
-  {
-    id: 'TRX-2741',
-    cardNumber: '27',
-    total: 70000,
-    status: 'ready_to_prepare',
-    createdAt: '13:50 WIB',
-    payment: {
-      method: 'qris',
-      amountPaid: 70000,
-      change: 0,
-      paidAt: '13:52 WIB',
-    },
-    items: [
-      {
-        menuItem: {
-          id: 'g03-001',
-          code: 'G03-001',
-          name: 'Nasi Goreng Spesial',
-          price: 25000,
-          stallId: 'G03',
-          stallName: 'Nasi Goreng Bang Rudi',
-        },
-        qty: 2,
-        notes: 'Satu pedas, satu sedang',
-      },
-      {
-        menuItem: {
-          id: 'g04-004',
-          code: 'G04-004',
-          name: 'Es Jeruk Peras',
-          price: 10000,
-          stallId: 'G04',
-          stallName: 'Es Teh & Jus',
-        },
-        qty: 2,
-      },
-    ],
-  },
-];
-
-// Helper to access persistent storage safely (localStorage shared across tabs)
+// Helper to access persistent storage safely
 function getStorage(): Storage | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -124,6 +34,7 @@ function getStorage(): Storage | null {
 }
 
 export const storage = {
+  // --- KARTU & KERANJANG PELANGGAN ---
   getCard(): string {
     const s = getStorage();
     if (!s) return '';
@@ -165,6 +76,16 @@ export const storage = {
     }
   },
 
+  clearCart(): void {
+    const s = getStorage();
+    if (!s) return;
+    try {
+      s.removeItem(STORAGE_KEYS.CART);
+    } catch {
+      // ignore
+    }
+  },
+
   getLastOrder(): Order | null {
     const s = getStorage();
     if (!s) return null;
@@ -186,30 +107,19 @@ export const storage = {
     }
   },
 
-  clearCart(): void {
-    const s = getStorage();
-    if (!s) return;
-    try {
-      s.removeItem(STORAGE_KEYS.CART);
-    } catch {
-      // ignore
-    }
-  },
-
-  // Orders Queue Management for Cashier & Kitchen
+  // --- PESANAN (KASIR, DAPUR GERAI, PELANGGAN) ---
   getOrders(): Order[] {
     const s = getStorage();
-    if (!s) return INITIAL_MOCK_ORDERS;
+    if (!s) return DAFTAR_PESANAN_AWAL;
     try {
       const data = s.getItem(STORAGE_KEYS.ORDERS);
       if (!data) {
-        // Initialize with mock orders if empty
-        s.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(INITIAL_MOCK_ORDERS));
-        return INITIAL_MOCK_ORDERS;
+        s.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(DAFTAR_PESANAN_AWAL));
+        return DAFTAR_PESANAN_AWAL;
       }
       return JSON.parse(data);
     } catch {
-      return INITIAL_MOCK_ORDERS;
+      return DAFTAR_PESANAN_AWAL;
     }
   },
 
@@ -218,7 +128,6 @@ export const storage = {
     if (!s) return;
     try {
       const orders = this.getOrders();
-      // Prepend so newest is first
       const updated = [order, ...orders.filter((o) => o.id !== order.id)];
       s.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(updated));
     } catch {
@@ -245,6 +154,224 @@ export const storage = {
       return updatedOrder;
     } catch {
       return null;
+    }
+  },
+
+  // --- MENU (CRUD OLEH GERAI & SUPERADMIN) ---
+  getMenus(): Menu[] {
+    const s = getStorage();
+    if (!s) return DAFTAR_MENU;
+    try {
+      const data = s.getItem(STORAGE_KEYS.MENUS);
+      if (!data) {
+        s.setItem(STORAGE_KEYS.MENUS, JSON.stringify(DAFTAR_MENU));
+        return DAFTAR_MENU;
+      }
+      return JSON.parse(data);
+    } catch {
+      return DAFTAR_MENU;
+    }
+  },
+
+  saveMenu(menu: Menu): void {
+    const s = getStorage();
+    if (!s) return;
+    try {
+      const menus = this.getMenus();
+      const existingIdx = menus.findIndex((m) => m.id === menu.id);
+      let updated: Menu[];
+      if (existingIdx > -1) {
+        updated = menus.map((m) => (m.id === menu.id ? menu : m));
+      } else {
+        updated = [...menus, menu];
+      }
+      s.setItem(STORAGE_KEYS.MENUS, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  },
+
+  updateMenu(id: string, updates: Partial<Menu>): Menu | null {
+    const s = getStorage();
+    if (!s) return null;
+    try {
+      const menus = this.getMenus();
+      let updatedMenu: Menu | null = null;
+      const updatedList = menus.map((m) => {
+        if (m.id === id) {
+          updatedMenu = { ...m, ...updates };
+          return updatedMenu;
+        }
+        return m;
+      });
+      s.setItem(STORAGE_KEYS.MENUS, JSON.stringify(updatedList));
+      return updatedMenu;
+    } catch {
+      return null;
+    }
+  },
+
+  // --- GERAI (SUPERADMIN) ---
+  getGerai(): Gerai[] {
+    const s = getStorage();
+    if (!s) return DAFTAR_GERAI;
+    try {
+      const data = s.getItem(STORAGE_KEYS.GERAI);
+      if (!data) {
+        s.setItem(STORAGE_KEYS.GERAI, JSON.stringify(DAFTAR_GERAI));
+        return DAFTAR_GERAI;
+      }
+      return JSON.parse(data);
+    } catch {
+      return DAFTAR_GERAI;
+    }
+  },
+
+  saveGerai(gerai: Gerai): void {
+    const s = getStorage();
+    if (!s) return;
+    try {
+      const list = this.getGerai();
+      const existingIdx = list.findIndex((g) => g.id === gerai.id);
+      let updated: Gerai[];
+      if (existingIdx > -1) {
+        updated = list.map((g) => (g.id === gerai.id ? gerai : g));
+      } else {
+        updated = [...list, gerai];
+      }
+      s.setItem(STORAGE_KEYS.GERAI, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  },
+
+  // --- PENGGUNA & AUTH STAF ---
+  getPengguna(): Pengguna[] {
+    const s = getStorage();
+    if (!s) return DAFTAR_PENGGUNA;
+    try {
+      const data = s.getItem(STORAGE_KEYS.PENGGUNA);
+      if (!data) {
+        s.setItem(STORAGE_KEYS.PENGGUNA, JSON.stringify(DAFTAR_PENGGUNA));
+        return DAFTAR_PENGGUNA;
+      }
+      return JSON.parse(data);
+    } catch {
+      return DAFTAR_PENGGUNA;
+    }
+  },
+
+  savePengguna(pengguna: Pengguna): void {
+    const s = getStorage();
+    if (!s) return;
+    try {
+      const list = this.getPengguna();
+      const existingIdx = list.findIndex((p) => p.id === pengguna.id);
+      let updated: Pengguna[];
+      if (existingIdx > -1) {
+        updated = list.map((p) => (p.id === pengguna.id ? pengguna : p));
+      } else {
+        updated = [...list, pengguna];
+      }
+      s.setItem(STORAGE_KEYS.PENGGUNA, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  },
+
+  getCurrentUser(): Pengguna | null {
+    const s = getStorage();
+    if (!s) return null;
+    try {
+      const data = s.getItem(STORAGE_KEYS.CURRENT_USER);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  setCurrentUser(user: Pengguna | null): void {
+    const s = getStorage();
+    if (!s) return;
+    try {
+      if (!user) {
+        s.removeItem(STORAGE_KEYS.CURRENT_USER);
+      } else {
+        s.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  // --- SESI KARTU PELANGGAN ---
+  getSesi(): SesiPelanggan[] {
+    const s = getStorage();
+    if (!s) return DAFTAR_SESI_KARTU;
+    try {
+      const data = s.getItem(STORAGE_KEYS.SESI);
+      if (!data) {
+        s.setItem(STORAGE_KEYS.SESI, JSON.stringify(DAFTAR_SESI_KARTU));
+        return DAFTAR_SESI_KARTU;
+      }
+      return JSON.parse(data);
+    } catch {
+      return DAFTAR_SESI_KARTU;
+    }
+  },
+
+  saveSesi(sesi: SesiPelanggan): void {
+    const s = getStorage();
+    if (!s) return;
+    try {
+      const list = this.getSesi();
+      const updated = [sesi, ...list.filter((x) => x.id !== sesi.id)];
+      s.setItem(STORAGE_KEYS.SESI, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  },
+
+  updateSesi(idSesi: string, updates: Partial<SesiPelanggan>): SesiPelanggan | null {
+    const s = getStorage();
+    if (!s) return null;
+    try {
+      const list = this.getSesi();
+      let updatedSesi: SesiPelanggan | null = null;
+      const updatedList = list.map((item) => {
+        if (item.id === idSesi) {
+          updatedSesi = { ...item, ...updates };
+          return updatedSesi;
+        }
+        return item;
+      });
+      s.setItem(STORAGE_KEYS.SESI, JSON.stringify(updatedList));
+      return updatedSesi;
+    } catch {
+      return null;
+    }
+  },
+
+  // --- RIWAYAT PEMBAYARAN KASIR ---
+  getPembayaran(): DetailPembayaran[] {
+    const s = getStorage();
+    if (!s) return [];
+    try {
+      const data = s.getItem(STORAGE_KEYS.PEMBAYARAN);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  savePembayaran(pembayaran: DetailPembayaran): void {
+    const s = getStorage();
+    if (!s) return;
+    try {
+      const list = this.getPembayaran();
+      s.setItem(STORAGE_KEYS.PEMBAYARAN, JSON.stringify([pembayaran, ...list]));
+    } catch {
+      // ignore
     }
   },
 };

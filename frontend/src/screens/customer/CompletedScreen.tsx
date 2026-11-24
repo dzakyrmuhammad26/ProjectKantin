@@ -1,52 +1,23 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Navbar, PageContainer, Panel, Button, StatusLabel, OrderSummaryView } from '@/components';
-import { Order, Stall } from '@/models';
-import { orderController, stallController } from '@/controllers';
+import React from 'react';
+import { Navbar } from '@/components/Navbar';
+import { PageContainer } from '@/components/PageContainer';
+import { Panel } from '@/components/Panel';
+import { Button } from '@/components/Button';
+import { StatusLabel } from '@/components/StatusLabel';
+import { OrderSummaryView } from '@/components/OrderSummaryView';
+import { useCompletedOrder } from './useCompletedOrder';
 
 export function CompletedScreen() {
-  const router = useRouter();
-  const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
-  const [stalls, setStalls] = useState<Stall[]>([]);
-  const [isOrderLoaded, setIsOrderLoaded] = useState(false);
-
-  // Load order and stalls on mount via controllers
-  useEffect(() => {
-    async function init() {
-      const [order, stallList] = await Promise.all([
-        orderController.getLastOrder(),
-        stallController.getStalls(),
-      ]);
-      setCompletedOrder(order);
-      setStalls(stallList);
-      setIsOrderLoaded(true);
-    }
-    init();
-  }, []);
-
-  const stallMap = useMemo(() => {
-    return stallController.getStallMap(stalls);
-  }, [stalls]);
-
-  const completedOrderItemsByStall = useMemo(() => {
-    if (!completedOrder?.items) return {};
-    return orderController.groupOrderItemsByStall(completedOrder.items);
-  }, [completedOrder]);
-
-  // Redirect if no order in storage
-  useEffect(() => {
-    if (isOrderLoaded && !completedOrder) {
-      router.replace('/order');
-    }
-  }, [isOrderLoaded, completedOrder, router]);
-
-  // Navigate back to menu
-  const handleNewOrder = () => {
-    const card = completedOrder?.cardNumber || '';
-    router.push(card ? `/order?card=${encodeURIComponent(card)}` : '/order');
-  };
+  const {
+    completedOrder,
+    cardNumber,
+    isOrderLoaded,
+    stallMap,
+    completedOrderItemsByStall,
+    handleNewOrder,
+  } = useCompletedOrder();
 
   if (!isOrderLoaded || !completedOrder) {
     return (
@@ -63,38 +34,38 @@ export function CompletedScreen() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <Navbar title="Kantin Darren" />
+      <Navbar title="Kantin Darren" cardNumber={cardNumber} />
 
       <PageContainer>
         <div className="max-w-[588px] mx-auto">
-          <Panel className="p-6 flex flex-col gap-6">
+          <Panel className="p-4 sm:p-6 flex flex-col gap-5 sm:gap-6">
             {/* Header: Title and Big Card Number */}
-            <div className="border-b border-line pb-4 flex items-start justify-between">
+            <div className="border-b border-line pb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
               <div>
                 <StatusLabel status="wait" label="Menunggu bayar" className="mb-1.5" />
-                <h1 className="text-[20px] font-semibold text-ink leading-tight">
+                <h1 className="text-[18px] sm:text-[20px] font-semibold text-ink leading-tight">
                   Pesanan terkirim
                 </h1>
                 <p className="text-[12px] text-muted mt-1">
-                  ID: {completedOrder.id} • {completedOrder.createdAt}
+                  ID: {completedOrder.id} • {completedOrder.createdAt || completedOrder.waktuPesan}
                 </p>
               </div>
-              <div className="text-right">
-                <span className="text-[12px] text-muted block uppercase tracking-wider font-semibold">
+              <div className="text-left sm:text-right bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-lg border sm:border-0 border-line">
+                <span className="text-[11px] sm:text-[12px] text-muted block uppercase tracking-wider font-semibold">
                   Nomor Kartu
                 </span>
-                <span className="text-[32px] font-bold text-ink leading-tight">
-                  {completedOrder.cardNumber ? `No. ${completedOrder.cardNumber}` : '-'}
+                <span className="text-[26px] sm:text-[32px] font-bold text-ink leading-tight">
+                  {cardNumber ? `No. ${cardNumber}` : '-'}
                 </span>
               </div>
             </div>
 
             {/* Payment Notice */}
-            <div className="border border-line bg-slate-50 rounded-lg p-4">
-              <p className="text-[14px] text-ink leading-relaxed">
+            <div className="border border-line bg-slate-50 rounded-lg p-3.5 sm:p-4">
+              <p className="text-[13px] sm:text-[14px] text-ink leading-relaxed">
                 Bayar di kasir dengan menunjukkan kartu{' '}
                 <strong className="font-semibold text-brand-700">
-                  {completedOrder.cardNumber ? `No. ${completedOrder.cardNumber}` : 'pesanan'}
+                  {cardNumber ? `No. ${cardNumber}` : 'pesanan'}
                 </strong>. Pesanan dibuat setelah pembayaran.
               </p>
             </div>
@@ -104,16 +75,12 @@ export function CompletedScreen() {
               itemsByStall={completedOrderItemsByStall}
               stallMap={stallMap}
               totalAmount={completedOrder.total}
-              totalCount={completedOrder.items.reduce((s, i) => s + i.qty, 0)}
+              totalCount={completedOrder.items.reduce((s, i) => s + (i.qty || i.jumlah || 0), 0)}
             />
 
             {/* Action Button */}
             <div className="pt-2">
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={handleNewOrder}
-              >
+              <Button variant="secondary" fullWidth onClick={handleNewOrder}>
                 Tambah pesanan
               </Button>
             </div>
@@ -123,3 +90,5 @@ export function CompletedScreen() {
     </div>
   );
 }
+
+export default CompletedScreen;

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { CartProvider } from '@/context';
+import { CartProvider } from '@/context/CartContext';
+import { AuthProvider } from '@/context/AuthContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -10,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Kantin POS — Pesan Makanan',
-  description: 'Sistem POS Kantin Multi-Gerai (Halaman Pelanggan)',
+  title: 'Kantin POS — Pujasera Multi-Gerai',
+  description: 'Sistem POS Kantin Multi-Gerai dengan Kasir Terpusat',
 };
 
 export default function RootLayout({
@@ -22,7 +23,9 @@ export default function RootLayout({
   return (
     <html lang="id" className={inter.variable}>
       <body className={`${inter.className} min-h-screen bg-[#F8F9FA] text-[#1F2937] antialiased`}>
-        <CartProvider>{children}</CartProvider>
+        <AuthProvider>
+          <CartProvider>{children}</CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

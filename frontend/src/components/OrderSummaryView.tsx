@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { CartItem, Stall } from '@/models';
-import { formatCurrency } from '@/utils';
+import { CartItem } from '@/models/pesanan';
+import { Stall } from '@/models/gerai';
+import { formatCurrency } from '@/utils/formatters';
 
 export interface OrderSummaryViewProps {
   itemsByStall: Record<string, CartItem[]>;

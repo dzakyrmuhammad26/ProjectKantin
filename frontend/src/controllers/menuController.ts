@@ -1,30 +1,26 @@
-import { menuApi } from '@/api';
-import { Menu, Stall } from '@/models';
+import { menuApi } from '@/api/menuApi';
+import { Menu } from '@/models/menu';
+import { Stall } from '@/models/gerai';
 
-export interface FilteredStallGroup {
-  stall: Stall;
-  menus: Menu[];
-}
-
-export const menuController = {
+class MenuController {
   async getMenus(): Promise<Menu[]> {
-    return await menuApi.getAll();
-  },
+    return await menuApi.dapatkanSemua();
+  }
 
   async getMenuById(id: string): Promise<Menu | null> {
-    return await menuApi.getById(id);
-  },
+    return await menuApi.dapatkanBerdasarkanId(id);
+  }
 
   async getMenusByStall(stallId: string): Promise<Menu[]> {
-    return await menuApi.getByStallId(stallId);
-  },
+    return await menuApi.dapatkanBerdasarkanGerai(stallId);
+  }
 
   filterMenus(
     menus: Menu[],
     stalls: Stall[],
     searchQuery: string,
     activeTabId: string
-  ): FilteredStallGroup[] {
+  ) {
     const q = searchQuery.trim().toLowerCase();
 
     const visibleStalls =
@@ -34,13 +30,18 @@ export const menuController = {
 
     return visibleStalls
       .map((stall) => {
-        const stallMenus = menus.filter((item) => item.stallId === stall.id);
+        const stallMenus = menus.filter(
+          (item) => item.stallId === stall.id || item.idGerai === stall.id
+        );
         const matchingMenus = stallMenus.filter((item) => {
           if (!q) return true;
+          const name = item.nama || item.name;
+          const code = item.kode || item.code;
+          const sName = stall.nama || stall.name;
           return (
-            item.name.toLowerCase().includes(q) ||
-            item.code.toLowerCase().includes(q) ||
-            stall.name.toLowerCase().includes(q)
+            name.toLowerCase().includes(q) ||
+            code.toLowerCase().includes(q) ||
+            sName.toLowerCase().includes(q)
           );
         });
 
@@ -50,5 +51,9 @@ export const menuController = {
         };
       })
       .filter((group) => group.menus.length > 0);
-  },
-};
+  }
+}
+
+const menuController = new MenuController();
+export { menuController };
+export default menuController;

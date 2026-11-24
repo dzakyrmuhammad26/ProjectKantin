@@ -1,16 +1,20 @@
-import { stallApi } from '@/api';
-import { Stall } from '@/models';
+import { geraiApi } from '@/api/geraiApi';
+import { Stall } from '@/models/gerai';
 
-export const stallController = {
+class StallController {
   async getStalls(): Promise<Stall[]> {
-    return await stallApi.getAll();
-  },
+    return await geraiApi.dapatkanSemua();
+  }
 
   async getStallById(id: string): Promise<Stall | null> {
-    return await stallApi.getById(id);
-  },
+    return await geraiApi.dapatkanBerdasarkanId(id);
+  }
 
   getStallMap(stalls: Stall[]): Map<string, Stall> {
     return new Map(stalls.map((s) => [s.id, s]));
-  },
-};
+  }
+}
+
+const stallController = new StallController();
+export { stallController };
+export default stallController;
