@@ -1,0 +1,27 @@
+export const PAYMENT_METHODS = {
+  TUNAI: 'tunai',
+  QRIS: 'qris',
+  DEBIT: 'debit',
+  CASH: 'cash',
+};
+
+export const PAYMENT_METHOD_LIST = [
+  PAYMENT_METHODS.TUNAI,
+  PAYMENT_METHODS.QRIS,
+  PAYMENT_METHODS.DEBIT,
+  PAYMENT_METHODS.CASH,
+];
+
+export const SESSION_STATUS = {
+  AKTIF: 'aktif',
+  LUNAS: 'lunas',
+  BATAL: 'batal',
+  TIDAK_DIBAYAR: 'tidak_dibayar',
+};
+
+export const SESSION_STATUS_LIST = [
+  SESSION_STATUS.AKTIF,
+  SESSION_STATUS.LUNAS,
+  SESSION_STATUS.BATAL,
+  SESSION_STATUS.TIDAK_DIBAYAR,
+];
