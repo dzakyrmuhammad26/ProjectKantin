@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 import UserModel from '../models/user.model.js'
 import { loginPinSchema } from '../schemas/penggunaSchema.js'
 import { PasswordHelper } from '../utils/bcrypt.js'
-import { JwtHelper } from '../utils/jwt.js'
+import { generateToken } from '../utils/jwt.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
 class AuthController {
@@ -43,7 +43,7 @@ class AuthController {
         })
       }
 
-      const accessToken = await JwtHelper.sign({
+      const accessToken = await generateToken({
         sub: matchedUser._id.toString(),
         peran: matchedUser.peran,
         idGerai: matchedUser.idGerai,
@@ -75,7 +75,7 @@ class AuthController {
   static async guest(req, res, next) {
     try {
       const guestId = new mongoose.Types.ObjectId().toString()
-      const accessToken = await JwtHelper.sign({
+      const accessToken = await generateToken({
         sub: guestId,
         peran: 'pelanggan',
         idGerai: null,
