@@ -71,6 +71,21 @@ class PembayaranController {
       } = result.data
 
       const targetIds = idPesananList && idPesananList.length > 0 ? idPesananList : [idPesanan]
+      const isCash = metode === 'tunai' || metode === 'cash'
+      const kembalian = isCash ? Math.max(0, uangDiterima - totalTagihan) : 0
+      const waktuBayar = new Date()
+      const kasirId = idKasir || req.user?.id || null
+
+      const paymentSummary = {
+        metode,
+        totalTagihan,
+        uangDiterima,
+        kembalian,
+        referensiQris: referensiQris || null,
+        idKasir: kasirId,
+        waktuBayar,
+      }
+
       const updatedOrders = []
 
       for (const targetId of targetIds) {
@@ -84,23 +99,15 @@ class PembayaranController {
         }
 
         order.status = 'siap_dibuat'
+        order.pembayaran = paymentSummary
         await order.save()
         updatedOrders.push(order)
       }
 
-      const isCash = metode === 'tunai' || metode === 'cash'
-      const kembalian = isCash ? Math.max(0, uangDiterima - totalTagihan) : 0
-
       const pembayaran = await PembayaranModel.create({
         idPesanan: targetIds.join(','),
         idSesi: idSesi || updatedOrders[0]?.idSesi || null,
-        metode,
-        totalTagihan,
-        uangDiterima,
-        kembalian,
-        referensiQris: referensiQris || null,
-        idKasir: idKasir || req.user?.id || null,
-        waktuBayar: new Date(),
+        ...paymentSummary,
       })
 
       return apiResponse({

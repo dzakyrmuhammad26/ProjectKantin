@@ -1,6 +1,7 @@
-import { storage } from '@/services/storage';
 import { DetailPembayaran } from '@/models/pembayaran';
-import { Pesanan } from '@/models/pesanan';
+import { Pesanan, StatusPesanan } from '@/models/pesanan';
+import { apiRequest } from './httpClient';
+import { mapPembayaran, mapPesanan } from './mappers';
 import { pesananApi } from './pesananApi';
 
 export const pembayaranApi = {
@@ -8,45 +9,67 @@ export const pembayaranApi = {
     idPesanan: string,
     pembayaran: DetailPembayaran
   ): Promise<Pesanan> {
-    // Simpan data pembayaran ke persistent log
-    storage.savePembayaran(pembayaran);
+    const metode = pembayaran.metode || pembayaran.method || 'tunai';
+    const uangDiterima = Number(pembayaran.uangDiterima ?? pembayaran.amountPaid ?? 0);
 
-    // Perbarui status pesanan menjadi 'siap_dibuat' (kompatibel: ready_to_prepare)
-    const updated = storage.updateOrder(idPesanan, {
-      status: 'siap_dibuat',
-      pembayaran,
-      payment: pembayaran,
-    });
-
-    if (!updated) {
-      throw new Error(`Pesanan dengan ID ${idPesanan} tidak ditemukan.`);
+    let totalTagihan = pembayaran.totalTagihan;
+    if (totalTagihan === undefined) {
+      const order = await pesananApi.dapatkanBerdasarkanId(idPesanan);
+      totalTagihan =
+        order?.total ?? Math.max(0, uangDiterima - Number(pembayaran.kembalian ?? pembayaran.change ?? 0));
     }
 
-    return Promise.resolve(updated);
+    const res = await apiRequest<{ pembayaran: any; pesanan: any }>('/pembayaran', {
+      method: 'POST',
+      body: JSON.stringify({
+        idPesanan,
+        metode,
+        totalTagihan,
+        uangDiterima,
+        kembalian: pembayaran.kembalian ?? pembayaran.change ?? 0,
+        referensiQris: pembayaran.referensiQris ?? null,
+        idKasir: pembayaran.idKasir ?? null,
+      }),
+    });
+
+    return mapPesanan(res.pesanan);
   },
 
   async prosesPembayaranMulti(
     idPesananList: string[],
     pembayaran: DetailPembayaran
   ): Promise<Pesanan[]> {
-    storage.savePembayaran(pembayaran);
+    const metode = pembayaran.metode || pembayaran.method || 'tunai';
+    const uangDiterima = Number(pembayaran.uangDiterima ?? pembayaran.amountPaid ?? 0);
 
-    const hasil: Pesanan[] = [];
-    for (const id of idPesananList) {
-      const updated = storage.updateOrder(id, {
-        status: 'siap_dibuat',
-        pembayaran,
-        payment: pembayaran,
-      });
-      if (updated) {
-        hasil.push(updated);
-      }
+    let totalTagihan = pembayaran.totalTagihan;
+    if (totalTagihan === undefined) {
+      const orders = await Promise.all(
+        idPesananList.map((id) => pesananApi.dapatkanBerdasarkanId(id))
+      );
+      totalTagihan = orders.reduce((acc, o) => acc + (o?.total ?? 0), 0);
     }
-    return Promise.resolve(hasil);
+
+    const res = await apiRequest<{ pembayaran: any; pesanan: any[] | any }>('/pembayaran', {
+      method: 'POST',
+      body: JSON.stringify({
+        idPesananList,
+        metode,
+        totalTagihan,
+        uangDiterima,
+        kembalian: pembayaran.kembalian ?? pembayaran.change ?? 0,
+        referensiQris: pembayaran.referensiQris ?? null,
+        idKasir: pembayaran.idKasir ?? null,
+      }),
+    });
+
+    const list = Array.isArray(res.pesanan) ? res.pesanan : [res.pesanan];
+    return list.map(mapPesanan);
   },
 
   async dapatkanSemuaPembayaran(): Promise<DetailPembayaran[]> {
-    return Promise.resolve(storage.getPembayaran());
+    const list = await apiRequest<any[]>('/pembayaran');
+    return list.map(mapPembayaran);
   },
 };
 
@@ -76,7 +99,7 @@ export const cashierApi = {
     return pesananApi.perbaruiItem(orderId, items, total);
   },
 
-  async updateStatus(orderId: string, status: any): Promise<Pesanan> {
+  async updateStatus(orderId: string, status: StatusPesanan): Promise<Pesanan> {
     return pesananApi.perbaruiStatus(orderId, status);
   },
 };

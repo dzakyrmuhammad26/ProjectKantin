@@ -1,24 +1,25 @@
-import { storage } from '@/services/storage';
 import { Menu } from '@/models/menu';
+import { apiRequest } from './httpClient';
+import { mapMenu } from './mappers';
 
 export const menuApi = {
   async dapatkanSemua(): Promise<Menu[]> {
-    const list = storage.getMenus();
-    return Promise.resolve(list.filter((m) => m.aktif !== false));
+    const list = await apiRequest<any[]>('/menu?aktif=true');
+    return list.map(mapMenu);
   },
 
   async dapatkanBerdasarkanId(id: string): Promise<Menu | null> {
-    const list = storage.getMenus();
-    const menu = list.find((m) => m.id === id) || null;
-    return Promise.resolve(menu);
+    try {
+      const data = await apiRequest<any>(`/menu/${encodeURIComponent(id)}`);
+      return data ? mapMenu(data) : null;
+    } catch {
+      return null;
+    }
   },
 
   async dapatkanBerdasarkanGerai(idGerai: string): Promise<Menu[]> {
-    const list = storage.getMenus();
-    const filtered = list.filter(
-      (m) => (m.idGerai === idGerai || m.stallId === idGerai) && m.aktif !== false
-    );
-    return Promise.resolve(filtered);
+    const list = await apiRequest<any[]>(`/menu/gerai/${encodeURIComponent(idGerai)}`);
+    return list.map(mapMenu);
   },
 
   async buatMenu(data: {
@@ -32,64 +33,71 @@ export const menuApi = {
     urutan?: number;
     isFavorit?: boolean;
   }): Promise<Menu> {
-    const newId = `${data.idGerai.toLowerCase()}-${Date.now().toString().slice(-4)}`;
-    const newMenu: Menu = {
-      id: newId,
-      kode: data.kode,
-      code: data.kode,
-      nama: data.nama,
-      name: data.nama,
-      harga: data.harga,
-      price: data.harga,
-      idGerai: data.idGerai,
-      stallId: data.idGerai,
-      namaGerai: data.namaGerai,
-      stallName: data.namaGerai,
-      kategori: data.kategori || 'makanan',
-      foto: data.foto || '/images/menu/placeholder.jpg',
-      image: data.foto || '/images/menu/placeholder.jpg',
-      urutan: data.urutan || 99,
-      isFavorit: data.isFavorit || false,
-      isHabis: false,
-      isSoldOut: false,
-      aktif: true,
-    };
-
-    storage.saveMenu(newMenu);
-    return Promise.resolve(newMenu);
+    const created = await apiRequest<any>('/menu', {
+      method: 'POST',
+      body: JSON.stringify({
+        kode: data.kode,
+        nama: data.nama,
+        harga: Number(data.harga),
+        idGerai: data.idGerai,
+        namaGerai: data.namaGerai,
+        kategori: data.kategori || 'makanan',
+        foto: data.foto || '/images/menu/placeholder.jpg',
+        urutan: data.urutan ?? 99,
+        isFavorit: Boolean(data.isFavorit),
+      }),
+    });
+    return mapMenu(created);
   },
 
   async perbaruiMenu(id: string, updates: Partial<Menu>): Promise<Menu> {
-    // Sinkronkan compatibility fields jika ada update
-    const normalizedUpdates: Partial<Menu> = { ...updates };
-    if (updates.nama) normalizedUpdates.name = updates.nama;
-    if (updates.harga !== undefined) normalizedUpdates.price = updates.harga;
-    if (updates.foto) normalizedUpdates.image = updates.foto;
-    if (updates.isHabis !== undefined) normalizedUpdates.isSoldOut = updates.isHabis;
-
-    const updated = storage.updateMenu(id, normalizedUpdates);
-    if (!updated) {
-      throw new Error(`Menu dengan ID ${id} tidak ditemukan.`);
+    const payload: Record<string, any> = {};
+    if (updates.kode !== undefined || updates.code !== undefined) {
+      payload.kode = updates.kode ?? updates.code;
     }
-    return Promise.resolve(updated);
+    if (updates.nama !== undefined || updates.name !== undefined) {
+      payload.nama = updates.nama ?? updates.name;
+    }
+    if (updates.harga !== undefined || updates.price !== undefined) {
+      payload.harga = Number(updates.harga ?? updates.price);
+    }
+    if (updates.idGerai !== undefined || updates.stallId !== undefined) {
+      payload.idGerai = updates.idGerai ?? updates.stallId;
+    }
+    if (updates.namaGerai !== undefined || updates.stallName !== undefined) {
+      payload.namaGerai = updates.namaGerai ?? updates.stallName;
+    }
+    if (updates.kategori !== undefined) payload.kategori = updates.kategori;
+    if (updates.foto !== undefined || updates.image !== undefined) {
+      payload.foto = updates.foto ?? updates.image;
+    }
+    if (updates.urutan !== undefined) payload.urutan = updates.urutan;
+    if (updates.isFavorit !== undefined) payload.isFavorit = updates.isFavorit;
+    if (updates.isHabis !== undefined || updates.isSoldOut !== undefined) {
+      payload.isHabis = updates.isHabis ?? updates.isSoldOut;
+    }
+    if (updates.aktif !== undefined) payload.aktif = updates.aktif;
+
+    const updated = await apiRequest<any>(`/menu/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return mapMenu(updated);
   },
 
   async toggleStatusHabis(id: string): Promise<Menu> {
-    const existing = await this.dapatkanBerdasarkanId(id);
-    if (!existing) {
-      throw new Error(`Menu dengan ID ${id} tidak ditemukan.`);
-    }
-    const statusBaru = !existing.isHabis;
-    return this.perbaruiMenu(id, {
-      isHabis: statusBaru,
-      isSoldOut: statusBaru,
+    const updated = await apiRequest<any>(`/menu/${encodeURIComponent(id)}/toggle-habis`, {
+      method: 'PATCH',
+      body: JSON.stringify({}),
     });
+    return mapMenu(updated);
   },
 
   async hapusMenu(id: string): Promise<boolean> {
-    // Soft delete dengan mengubah aktif: false
-    const updated = storage.updateMenu(id, { aktif: false });
-    return Promise.resolve(!!updated);
+    await apiRequest(`/menu/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    return true;
   },
 
   // Kompatibilitas kode lama

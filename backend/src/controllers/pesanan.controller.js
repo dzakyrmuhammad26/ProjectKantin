@@ -215,7 +215,17 @@ class PesananController {
   }
 
   static async updateStatus(req, res, next) {
-    const result = updateStatusPesananSchema.safeParse(req.body)
+    const statusMap = {
+      pending_payment: 'menunggu_bayar',
+      ready_to_prepare: 'siap_dibuat',
+      completed: 'selesai',
+      cancelled: 'batal',
+    }
+    const normalizedBody = {
+      ...req.body,
+      status: statusMap[req.body?.status] || req.body?.status,
+    }
+    const result = updateStatusPesananSchema.safeParse(normalizedBody)
     if (!result.success) {
       return apiResponseValidation({ res, errors: result.error })
     }

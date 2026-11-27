@@ -39,6 +39,22 @@ const itemPesananSchema = new mongoose.Schema(
   { _id: false },
 )
 
+const pembayaranRingkasSchema = new mongoose.Schema(
+  {
+    metode: {
+      type: String,
+      enum: ['tunai', 'qris', 'debit', 'cash'],
+    },
+    totalTagihan: Number,
+    uangDiterima: Number,
+    kembalian: Number,
+    referensiQris: { type: String, default: null },
+    idKasir: { type: String, default: null },
+    waktuBayar: Date,
+  },
+  { _id: false },
+)
+
 const schema = new mongoose.Schema(
   {
     idPesanan: {
@@ -97,6 +113,10 @@ const schema = new mongoose.Schema(
     waktuPesan: {
       type: Date,
       default: Date.now,
+    },
+    pembayaran: {
+      type: pembayaranRingkasSchema,
+      default: null,
     },
   },
   {

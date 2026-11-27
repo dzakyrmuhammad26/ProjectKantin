@@ -1,4 +1,5 @@
-import mongoose, { connectDB } from '../config/database.js'
+import mongoose from 'mongoose'
+import connectDB from '../config/database.js'
 import {
   INITIAL_GERAI,
   INITIAL_MENU,

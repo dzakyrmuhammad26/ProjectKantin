@@ -1,16 +1,20 @@
-import { storage } from '@/services/storage';
 import { Gerai } from '@/models/gerai';
+import { apiRequest } from './httpClient';
+import { mapGerai } from './mappers';
 
 export const geraiApi = {
   async dapatkanSemua(): Promise<Gerai[]> {
-    const list = storage.getGerai();
-    return Promise.resolve(list.filter((g) => g.aktif !== false));
+    const list = await apiRequest<any[]>('/gerai?aktif=true');
+    return list.map(mapGerai);
   },
 
   async dapatkanBerdasarkanId(id: string): Promise<Gerai | null> {
-    const list = storage.getGerai();
-    const gerai = list.find((g) => g.id === id) || null;
-    return Promise.resolve(gerai);
+    try {
+      const data = await apiRequest<any>(`/gerai/${encodeURIComponent(id)}`);
+      return data ? mapGerai(data) : null;
+    } catch {
+      return null;
+    }
   },
 
   async buatGerai(data: {
@@ -19,39 +23,42 @@ export const geraiApi = {
     penyewa: string;
     warna: string;
   }): Promise<Gerai> {
-    const id = data.kode.toUpperCase();
-    const newGerai: Gerai = {
-      id,
-      kode: data.kode,
-      nama: data.nama,
-      penyewa: data.penyewa,
-      warna: data.warna,
-      aktif: true,
-      code: data.kode,
-      name: data.nama,
-      color: data.warna,
-    };
-    storage.saveGerai(newGerai);
-    return Promise.resolve(newGerai);
+    const created = await apiRequest<any>('/gerai', {
+      method: 'POST',
+      body: JSON.stringify({
+        kode: data.kode,
+        nama: data.nama,
+        penyewa: data.penyewa,
+        warna: data.warna,
+        aktif: true,
+      }),
+    });
+    return mapGerai(created);
   },
 
   async perbaruiGerai(id: string, updates: Partial<Gerai>): Promise<Gerai> {
-    const list = storage.getGerai();
-    const existing = list.find((g) => g.id === id);
-    if (!existing) {
-      throw new Error(`Gerai dengan ID ${id} tidak ditemukan.`);
+    const payload: Record<string, any> = {};
+    if (updates.kode !== undefined || updates.code !== undefined) {
+      payload.kode = updates.kode ?? updates.code;
+    }
+    if (updates.nama !== undefined || updates.name !== undefined) {
+      payload.nama = updates.nama ?? updates.name;
+    }
+    if (updates.penyewa !== undefined) {
+      payload.penyewa = updates.penyewa;
+    }
+    if (updates.warna !== undefined || updates.color !== undefined) {
+      payload.warna = updates.warna ?? updates.color;
+    }
+    if (updates.aktif !== undefined) {
+      payload.aktif = updates.aktif;
     }
 
-    const updated: Gerai = {
-      ...existing,
-      ...updates,
-      code: updates.kode || existing.code,
-      name: updates.nama || existing.name,
-      color: updates.warna || existing.color,
-    };
-
-    storage.saveGerai(updated);
-    return Promise.resolve(updated);
+    const updated = await apiRequest<any>(`/gerai/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return mapGerai(updated);
   },
 
   // Kompatibilitas kode lama

@@ -1,42 +1,50 @@
-import { storage } from '@/services/storage';
 import { ItemPesanan, Pesanan, StatusPesanan, SumberPesanan } from '@/models/pesanan';
-import { formatTime } from '@/utils/formatters';
+import { storage } from '@/services/storage';
+import { apiRequest } from './httpClient';
+import { mapPesanan } from './mappers';
+
+function serializeItems(items: ItemPesanan[]) {
+  return items.map((item) => {
+    const m = item.menuItem || item.menu;
+    return {
+      idMenu: m?.id || m?.kode || '',
+      namaMenu: m?.nama || m?.name || '',
+      idGerai: m?.idGerai || m?.stallId || null,
+      namaGerai: m?.namaGerai || m?.stallName || null,
+      jumlah: Number(item.jumlah ?? item.qty ?? 1),
+      catatan: item.catatan ?? item.notes ?? '',
+    };
+  });
+}
 
 export const pesananApi = {
   async dapatkanSemua(): Promise<Pesanan[]> {
-    return Promise.resolve(storage.getOrders());
+    const list = await apiRequest<any[]>('/pesanan');
+    return list.map(mapPesanan);
   },
 
   async dapatkanBerdasarkanId(id: string): Promise<Pesanan | null> {
-    const orders = storage.getOrders();
-    const found = orders.find((o) => o.id === id) || null;
-    return Promise.resolve(found);
+    try {
+      const data = await apiRequest<any>(`/pesanan/${encodeURIComponent(id)}`);
+      return data ? mapPesanan(data) : null;
+    } catch {
+      return null;
+    }
   },
 
   async dapatkanBerdasarkanNomorKartu(nomorKartu: string): Promise<Pesanan[]> {
-    const orders = storage.getOrders();
-    const filtered = orders.filter(
-      (o) => o.nomorKartu === nomorKartu || o.cardNumber === nomorKartu
-    );
-    return Promise.resolve(filtered);
+    const list = await apiRequest<any[]>(`/pesanan/kartu/${encodeURIComponent(nomorKartu)}`);
+    return list.map(mapPesanan);
   },
 
   async dapatkanBerdasarkanGerai(idGerai: string): Promise<Pesanan[]> {
-    const orders = storage.getOrders();
-    // Cari pesanan yang memiliki idGerai cocok atau item yang stallId-nya cocok
-    const filtered = orders.filter((o) => {
-      if (o.idGerai === idGerai) return true;
-      return o.items.some(
-        (item) => item.menuItem.stallId === idGerai || item.menuItem.idGerai === idGerai
-      );
-    });
-    return Promise.resolve(filtered);
+    const list = await apiRequest<any[]>(`/pesanan/gerai/${encodeURIComponent(idGerai)}`);
+    return list.map(mapPesanan);
   },
 
   async dapatkanBerdasarkanSesi(idSesi: string): Promise<Pesanan[]> {
-    const orders = storage.getOrders();
-    const filtered = orders.filter((o) => o.idSesi === idSesi);
-    return Promise.resolve(filtered);
+    const list = await apiRequest<any[]>(`/pesanan/sesi/${encodeURIComponent(idSesi)}`);
+    return list.map(mapPesanan);
   },
 
   async buatPesanan(data: {
@@ -50,35 +58,35 @@ export const pesananApi = {
     catatan?: string;
     sumber?: SumberPesanan;
   }): Promise<Pesanan> {
-    const randomCode = Math.floor(1000 + Math.random() * 9000);
-    const order: Pesanan = {
-      id: `TRX-${data.nomorKartu}${randomCode}`,
-      idSesi: data.idSesi,
-      nomorKartu: data.nomorKartu,
-      cardNumber: data.nomorKartu,
-      nomorMeja: data.nomorMeja,
-      idGerai: data.idGerai,
-      namaGerai: data.namaGerai,
-      items: data.items,
-      total: data.total,
-      status: 'menunggu_bayar',
-      sumber: data.sumber || 'pelanggan',
-      catatan: data.catatan,
-      waktuPesan: formatTime(),
-      createdAt: formatTime(),
-    };
+    const created = await apiRequest<any>('/pesanan', {
+      method: 'POST',
+      body: JSON.stringify({
+        nomorKartu: data.nomorKartu,
+        nomorMeja: data.nomorMeja ?? null,
+        idGerai: data.idGerai ?? null,
+        namaGerai: data.namaGerai ?? null,
+        idSesi: data.idSesi ?? null,
+        sumber: data.sumber || 'pelanggan',
+        catatan: data.catatan ?? '',
+        total: data.total,
+        items: serializeItems(data.items),
+      }),
+    });
 
-    storage.setLastOrder(order);
-    storage.saveOrder(order);
-    return Promise.resolve(order);
+    const mapped = mapPesanan(created);
+    storage.setLastOrder(mapped);
+    return mapped;
   },
 
   async perbaruiStatus(idPesanan: string, status: StatusPesanan): Promise<Pesanan> {
-    const updated = storage.updateOrder(idPesanan, { status });
-    if (!updated) {
-      throw new Error(`Pesanan dengan ID ${idPesanan} tidak ditemukan.`);
-    }
-    return Promise.resolve(updated);
+    const updated = await apiRequest<any>(
+      `/pesanan/${encodeURIComponent(idPesanan)}/status`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }
+    );
+    return mapPesanan(updated);
   },
 
   async perbaruiItem(
@@ -86,19 +94,28 @@ export const pesananApi = {
     items: ItemPesanan[],
     total: number
   ): Promise<Pesanan> {
-    const updated = storage.updateOrder(idPesanan, { items, total });
-    if (!updated) {
-      throw new Error(`Pesanan dengan ID ${idPesanan} tidak ditemukan.`);
-    }
-    return Promise.resolve(updated);
+    const updated = await apiRequest<any>(
+      `/pesanan/${encodeURIComponent(idPesanan)}/items`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          items: serializeItems(items),
+          total,
+        }),
+      }
+    );
+    return mapPesanan(updated);
   },
 
   async batalkanPesanan(idPesanan: string): Promise<Pesanan> {
-    const updated = storage.updateOrder(idPesanan, { status: 'batal' });
-    if (!updated) {
-      throw new Error(`Pesanan dengan ID ${idPesanan} tidak ditemukan.`);
-    }
-    return Promise.resolve(updated);
+    const updated = await apiRequest<any>(
+      `/pesanan/${encodeURIComponent(idPesanan)}/batal`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({}),
+      }
+    );
+    return mapPesanan(updated);
   },
 
   async dapatkanPesananTerakhir(): Promise<Pesanan | null> {

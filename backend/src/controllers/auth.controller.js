@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import UserModel from '../models/user.model.js'
 import { loginPinSchema } from '../schemas/penggunaSchema.js'
 import { PasswordHelper } from '../utils/bcrypt.js'
@@ -64,6 +65,30 @@ class AuthController {
           },
           access_token: accessToken,
           token_type: 'Bearer',
+        },
+      })
+    } catch (error) {
+      return next(error)
+    }
+  }
+
+  static async guest(req, res, next) {
+    try {
+      const guestId = new mongoose.Types.ObjectId().toString()
+      const accessToken = await JwtHelper.sign({
+        sub: guestId,
+        peran: 'pelanggan',
+        idGerai: null,
+      })
+
+      return apiResponse({
+        res,
+        status: 200,
+        message: 'Token pelanggan berhasil dibuat',
+        data: {
+          access_token: accessToken,
+          token_type: 'Bearer',
+          peran: 'pelanggan',
         },
       })
     } catch (error) {
