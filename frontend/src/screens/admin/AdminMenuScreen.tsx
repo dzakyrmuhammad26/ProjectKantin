@@ -29,6 +29,11 @@ export function AdminMenuScreen() {
     setFormIdGerai,
     formKategori,
     setFormKategori,
+    formFoto,
+    setFormFoto,
+    selectedFile,
+    setSelectedFile,
+    isSubmitting,
     feedback,
     handleBukaTambah,
     handleBukaEdit,
@@ -199,6 +204,11 @@ export function AdminMenuScreen() {
         onHargaChange={setFormHarga}
         formKategori={formKategori}
         onKategoriChange={setFormKategori}
+        formFoto={formFoto}
+        onFotoChange={setFormFoto}
+        selectedFile={selectedFile}
+        onFileSelect={setSelectedFile}
+        isSubmitting={isSubmitting}
       />
     </div>
   );

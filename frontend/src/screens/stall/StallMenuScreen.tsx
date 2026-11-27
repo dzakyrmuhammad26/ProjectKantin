@@ -28,6 +28,8 @@ export function StallMenuScreen() {
     setFormFoto,
     formKode,
     setFormKode,
+    selectedFile,
+    setSelectedFile,
     isSubmitting,
     actionMessage,
     handlePilihGerai,
@@ -151,6 +153,8 @@ export function StallMenuScreen() {
         onFormKategoriChange={setFormKategori}
         formFoto={formFoto}
         onFormFotoChange={setFormFoto}
+        selectedFile={selectedFile}
+        onFileSelect={setSelectedFile}
         isSubmitting={isSubmitting}
       />
     </div>

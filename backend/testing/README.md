@@ -6,6 +6,7 @@ Folder ini berisi koleksi pengujian API otomatis berbasis **Postman Collection v
 - `kantin-api.postman_collection.json` — Koleksi lengkap seluruh endpoint API (positif & negatif).
 - `kantin-local.postman_environment.json` — Konfigurasi environment lokal (`http://localhost:5000/api`) dan kredensial seeder.
 - `run-newman.js` — Script runner Newman untuk menjalankan suite pengujian sekaligus mengekspor laporan JSON.
+- `sample-menu.jpg` & `sample-invalid.txt` — File sampel gambar valid dan file non-gambar untuk skenario pengujian upload.
 
 ## Prasyarat
 1. Pastikan database sudah di-seed (`bun run seed`).
@@ -39,3 +40,4 @@ API_BASE_URL=http://localhost:5000/api bun run test:api
 8. **Pembayaran**: Proses Pembayaran Tunai & hitung kembalian, validasi uang kurang (`422`), List & Filter riwayat, Detail pembayaran.
 9. **Laporan**: Rekapitulasi Harian per Gerai & Ringkasan Dashboard.
 10. **Pengaturan**: Baca Pengaturan, Update (`PUT`/`PATCH`), serta proteksi role superadmin (`403`).
+11. **Upload Gambar**: Upload file gambar valid (`201`), cleanup file (`DELETE /upload`), validasi tanpa file (`422`), tolak format non-gambar (`400`), tanpa token (`401`), dan proteksi RBAC role non-admin/gerai (`403`).

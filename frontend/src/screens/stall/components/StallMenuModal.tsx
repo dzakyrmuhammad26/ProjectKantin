@@ -1,4 +1,5 @@
 import React from 'react';
+import { MenuImageUploadField } from '@/components/MenuImageUploadField';
 
 interface StallMenuModalProps {
   modalMode: 'tambah' | 'edit' | null;
@@ -14,6 +15,8 @@ interface StallMenuModalProps {
   onFormKategoriChange: (val: 'makanan' | 'minuman' | 'camilan') => void;
   formFoto: string;
   onFormFotoChange: (val: string) => void;
+  selectedFile: File | null;
+  onFileSelect: (file: File | null) => void;
   isSubmitting: boolean;
 }
 
@@ -31,6 +34,8 @@ export function StallMenuModal({
   onFormKategoriChange,
   formFoto,
   onFormFotoChange,
+  selectedFile,
+  onFileSelect,
   isSubmitting,
 }: StallMenuModalProps) {
   if (!modalMode) return null;
@@ -100,16 +105,12 @@ export function StallMenuModal({
             </select>
           </div>
 
-          <div>
-            <label className="block font-medium text-[#374151] mb-1">URL Foto (Opsional)</label>
-            <input
-              type="text"
-              value={formFoto}
-              onChange={(e) => onFormFotoChange(e.target.value)}
-              placeholder="/images/menu/contoh.jpg"
-              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
+          <MenuImageUploadField
+            imageUrl={formFoto}
+            onImageUrlChange={onFormFotoChange}
+            selectedFile={selectedFile}
+            onFileSelect={onFileSelect}
+          />
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E5E7EB]">
             <button

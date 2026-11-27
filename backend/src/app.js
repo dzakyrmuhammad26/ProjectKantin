@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import path from 'path'
 import { FRONTEND_URL } from './config/env.js'
 import { errorHandler, notFoundHandler } from './middlewares/error.js'
 import apiRoutes from './routes/api.routes.js'
@@ -14,6 +15,7 @@ app.use(
 )
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use('/uploads', express.static(path.resolve('uploads')))
 
 app.use('/api', apiRoutes)
 

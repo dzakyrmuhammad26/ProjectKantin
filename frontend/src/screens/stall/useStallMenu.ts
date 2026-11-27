@@ -5,6 +5,7 @@ import { Gerai } from '@/models/gerai';
 import { Menu } from '@/models/menu';
 import geraiController from '@/controllers/geraiController';
 import menuGeraiController from '@/controllers/menuGeraiController';
+import { uploadApi } from '@/api/uploadApi';
 
 export function useStallMenu() {
   const [daftarGerai, setDaftarGerai] = useState<Gerai[]>([]);
@@ -22,6 +23,7 @@ export function useStallMenu() {
   const [formKategori, setFormKategori] = useState<'makanan' | 'minuman' | 'camilan'>('makanan');
   const [formFoto, setFormFoto] = useState('');
   const [formKode, setFormKode] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -81,6 +83,7 @@ export function useStallMenu() {
   const handleBukaModalTambah = () => {
     setModalMode('tambah');
     setSelectedMenu(null);
+    setSelectedFile(null);
     setFormNama('');
     setFormHarga(15000);
     setFormKategori('makanan');
@@ -91,6 +94,7 @@ export function useStallMenu() {
   const handleBukaModalEdit = (menu: Menu) => {
     setModalMode('edit');
     setSelectedMenu(menu);
+    setSelectedFile(null);
     setFormNama(menu.nama || menu.name);
     setFormHarga(menu.harga || menu.price);
     setFormKategori((menu.kategori as any) || 'makanan');
@@ -113,13 +117,19 @@ export function useStallMenu() {
 
     try {
       setIsSubmitting(true);
+      let finalFotoUrl = formFoto.trim() || '/images/menu/placeholder.jpg';
+      if (selectedFile) {
+        const uploaded = await uploadApi.uploadMenuImage(selectedFile);
+        finalFotoUrl = uploaded.url;
+      }
+
       if (modalMode === 'tambah') {
         await menuGeraiController.tambahMenu(geraiAktif.id, geraiAktif.nama, {
           kode: formKode,
           nama: formNama.trim(),
           harga: formHarga,
           kategori: formKategori,
-          foto: formFoto.trim() || '/images/menu/placeholder.jpg',
+          foto: finalFotoUrl,
         });
         setActionMessage({ text: `Menu "${formNama}" berhasil ditambahkan!`, type: 'success' });
       } else if (modalMode === 'edit' && selectedMenu) {
@@ -127,11 +137,12 @@ export function useStallMenu() {
           nama: formNama.trim(),
           harga: formHarga,
           kategori: formKategori,
-          foto: formFoto.trim() || '/images/menu/placeholder.jpg',
+          foto: finalFotoUrl,
         });
         setActionMessage({ text: `Menu "${formNama}" berhasil diperbarui!`, type: 'success' });
       }
 
+      setSelectedFile(null);
       setModalMode(null);
       await loadMenuStan(geraiAktif.id);
       setTimeout(() => setActionMessage(null), 3000);
@@ -194,6 +205,8 @@ export function useStallMenu() {
     setFormFoto,
     formKode,
     setFormKode,
+    selectedFile,
+    setSelectedFile,
     isSubmitting,
     actionMessage,
     handlePilihGerai,

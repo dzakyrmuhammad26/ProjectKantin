@@ -1,6 +1,7 @@
 import React from 'react';
 import { Gerai } from '@/models/gerai';
 import { Menu } from '@/models/menu';
+import { MenuImageUploadField } from '@/components/MenuImageUploadField';
 
 interface AdminMenuModalProps {
   isOpen: boolean;
@@ -18,6 +19,11 @@ interface AdminMenuModalProps {
   onHargaChange: (val: number) => void;
   formKategori: 'makanan' | 'minuman' | 'camilan';
   onKategoriChange: (val: 'makanan' | 'minuman' | 'camilan') => void;
+  formFoto: string;
+  onFotoChange: (val: string) => void;
+  selectedFile: File | null;
+  onFileSelect: (file: File | null) => void;
+  isSubmitting: boolean;
 }
 
 export function AdminMenuModal({
@@ -36,6 +42,11 @@ export function AdminMenuModal({
   onHargaChange,
   formKategori,
   onKategoriChange,
+  formFoto,
+  onFotoChange,
+  selectedFile,
+  onFileSelect,
+  isSubmitting,
 }: AdminMenuModalProps) {
   if (!isOpen) return null;
 
@@ -119,6 +130,13 @@ export function AdminMenuModal({
             </select>
           </div>
 
+          <MenuImageUploadField
+            imageUrl={formFoto}
+            onImageUrlChange={onFotoChange}
+            selectedFile={selectedFile}
+            onFileSelect={onFileSelect}
+          />
+
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E5E7EB]">
             <button
               type="button"
@@ -129,9 +147,10 @@ export function AdminMenuModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              disabled={isSubmitting}
+              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-50"
             >
-              Simpan Menu
+              {isSubmitting ? 'Menyimpan...' : 'Simpan Menu'}
             </button>
           </div>
         </form>

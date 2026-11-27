@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import adminKatalogController from '@/controllers/adminKatalogController';
+import { uploadApi } from '@/api/uploadApi';
 import { Menu } from '@/models/menu';
 import { Gerai } from '@/models/gerai';
 
@@ -21,6 +22,8 @@ export function useAdminMenu() {
   const [formIdGerai, setFormIdGerai] = useState('');
   const [formKategori, setFormKategori] = useState<'makanan' | 'minuman' | 'camilan'>('makanan');
   const [formFoto, setFormFoto] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -45,6 +48,7 @@ export function useAdminMenu() {
 
   const handleBukaTambah = () => {
     setEditingMenu(null);
+    setSelectedFile(null);
     const targetGerai = geraiList[0];
     setFormIdGerai(targetGerai?.id || 'G01');
     setFormKode(`${targetGerai?.kode || 'G01'}-${String(menuList.length + 1).padStart(3, '0')}`);
@@ -57,6 +61,7 @@ export function useAdminMenu() {
 
   const handleBukaEdit = (menu: Menu) => {
     setEditingMenu(menu);
+    setSelectedFile(null);
     setFormIdGerai(menu.idGerai || menu.stallId);
     setFormKode(menu.kode || menu.code);
     setFormNama(menu.nama || menu.name);
@@ -72,12 +77,19 @@ export function useAdminMenu() {
     const namaGerai = g?.nama || 'Gerai';
 
     try {
+      setIsSubmitting(true);
+      let finalFotoUrl = formFoto.trim() || '/images/menu/placeholder.jpg';
+      if (selectedFile) {
+        const uploaded = await uploadApi.uploadMenuImage(selectedFile);
+        finalFotoUrl = uploaded.url;
+      }
+
       if (editingMenu) {
         await adminKatalogController.ubahMenuGlobal(editingMenu.id, {
           nama: formNama.trim(),
           harga: formHarga,
           kategori: formKategori,
-          foto: formFoto.trim(),
+          foto: finalFotoUrl,
         });
         setFeedback(`Menu "${formNama}" berhasil diperbarui.`);
       } else {
@@ -88,16 +100,19 @@ export function useAdminMenu() {
           idGerai: formIdGerai,
           namaGerai,
           kategori: formKategori,
-          foto: formFoto.trim(),
+          foto: finalFotoUrl,
         });
         setFeedback(`Menu "${formNama}" berhasil ditambahkan.`);
       }
 
+      setSelectedFile(null);
       setIsModalOpen(false);
       await loadData();
       setTimeout(() => setFeedback(null), 3000);
     } catch (err: any) {
       alert(err.message || 'Gagal menyimpan menu');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -155,6 +170,9 @@ export function useAdminMenu() {
     setFormKategori,
     formFoto,
     setFormFoto,
+    selectedFile,
+    setSelectedFile,
+    isSubmitting,
     feedback,
     handleBukaTambah,
     handleBukaEdit,

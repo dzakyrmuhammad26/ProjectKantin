@@ -10,6 +10,7 @@ import pengaturanRoutes from './pengaturan.routes.js'
 import penggunaRoutes from './pengguna.routes.js'
 import pesananRoutes from './pesanan.routes.js'
 import sesiRoutes from './sesi.routes.js'
+import uploadRoutes from './upload.routes.js'
 
 const router = express.Router()
 
@@ -38,5 +39,6 @@ router.use('/pesanan', pesananRoutes)
 router.use('/pembayaran', pembayaranRoutes)
 router.use('/laporan', laporanRoutes)
 router.use('/pengaturan', pengaturanRoutes)
+router.use('/upload', uploadRoutes)
 
 export default router

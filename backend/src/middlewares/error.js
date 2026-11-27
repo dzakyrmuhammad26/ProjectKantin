@@ -1,4 +1,6 @@
+import multer from 'multer'
 import z, { ZodError } from 'zod'
+import { UPLOAD_MAX_SIZE_MB } from '../config/env.js'
 import { AppError } from '../utils/appError.js'
 
 // eslint-disable-next-line no-unused-vars
@@ -11,6 +13,15 @@ export const errorHandler = (err, req, res, next) => {
     statusCode = 422
     message = 'Validation error'
     errors = z.flattenError(err).fieldErrors
+  } else if (err instanceof multer.MulterError) {
+    statusCode = 400
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = `Ukuran file terlalu besar. Maksimal ${UPLOAD_MAX_SIZE_MB} MB`
+    } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      message = 'Field upload tidak valid, gunakan key "image"'
+    } else {
+      message = err.message
+    }
   } else if (err.name === 'CastError') {
     statusCode = 400
     message = `Format ID tidak valid untuk ${err.path}: ${err.value}`
