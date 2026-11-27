@@ -10,6 +10,14 @@ const itemPesananSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    idGerai: {
+      type: String,
+      default: null,
+    },
+    namaGerai: {
+      type: String,
+      default: null,
+    },
     hargaSaatItu: {
       type: Number,
       required: true,

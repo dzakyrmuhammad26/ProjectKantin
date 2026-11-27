@@ -1,19 +1,14 @@
-import dotenv from 'dotenv';
-import app from './app.js';
-import { initDatabase } from './config/database.js';
-
-dotenv.config();
-
-const PORT = process.env.PORT || 5000;
+import app from './app.js'
+import { connectDB } from './config/database.js'
+import { APP_PORT } from './config/env.js'
 
 const startServer = async () => {
-  // Inisialisasi Database
-  await initDatabase();
+  await connectDB()
 
-  app.listen(PORT, () => {
-    console.log(`🚀 [Server] Berjalan pada port ${PORT} (http://localhost:${PORT})`);
-    console.log(`📡 [Health] http://localhost:${PORT}/api/health`);
-  });
-};
+  app.listen(APP_PORT, () => {
+    console.log(`🚀 [Server] Berjalan pada port ${APP_PORT} (http://localhost:${APP_PORT})`)
+    console.log(`📡 [Health] http://localhost:${APP_PORT}/api/health`)
+  })
+}
 
-startServer();
+startServer()

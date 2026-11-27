@@ -17,7 +17,7 @@ const schema = new mongoose.Schema(
     pin: {
       type: String,
       required: true,
-      trim: true,
+      select: false,
     },
     peran: {
       type: String,
