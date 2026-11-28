@@ -660,7 +660,7 @@
           }
         },
         {
-          "name": "PUT /pengguna/:id - Update User",
+          "name": "PUT /pengguna/:id - Update User & Assign Gerai",
           "event": [
             {
               "listen": "test",
@@ -670,9 +670,11 @@
                   "pm.test('Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Nama updated via PUT', function () {",
+                  "pm.test('Nama and Gerai role updated via PUT', function () {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.data.nama).to.eql('Kasir Newman PUT');",
+                  "    pm.expect(json.data.nama).to.eql('Gerai Newman PUT');",
+                  "    pm.expect(json.data.peran).to.eql('gerai');",
+                  "    pm.expect(json.data.idGerai).to.eql('G01');",
                   "});"
                 ]
               }
@@ -686,7 +688,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nama\": \"Kasir Newman PUT\",\n  \"peran\": \"kasir\",\n  \"aktif\": true\n}"
+              "raw": "{\n  \"nama\": \"Gerai Newman PUT\",\n  \"peran\": \"gerai\",\n  \"idGerai\": \"G01\",\n  \"aktif\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/pengguna/{{createdUserId}}",
@@ -696,7 +698,7 @@
           }
         },
         {
-          "name": "PATCH /pengguna/:id - Partial Update",
+          "name": "PATCH /pengguna/:id - Switch Role to Kasir Clears idGerai",
           "event": [
             {
               "listen": "test",
@@ -706,9 +708,11 @@
                   "pm.test('Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Nama updated via PATCH', function () {",
+                  "pm.test('Switching role from gerai to kasir clears idGerai to null', function () {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.data.nama).to.eql('Kasir Newman PATCH');",
+                  "    pm.expect(json.data.peran).to.eql('kasir');",
+                  "    pm.expect(json.data.idGerai).to.eql(null);",
                   "});"
                 ]
               }
@@ -722,7 +726,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nama\": \"Kasir Newman PATCH\"\n}"
+              "raw": "{\n  \"nama\": \"Kasir Newman PATCH\",\n  \"peran\": \"kasir\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/pengguna/{{createdUserId}}",
@@ -2659,6 +2663,42 @@
           }
         },
         {
+          "name": "PUT /pesanan/:id/items - Blocked Cancelled Order (Negative 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Cancelled order rejects item edit', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.meta.message.toLowerCase()).to.include('dibatalkan');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"idMenu\": \"{{menuKode}}\", \"jumlah\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pesanan/{{cancelPesananId}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["pesanan", "{{cancelPesananId}}", "items"]
+            }
+          }
+        },
+        {
           "name": "POST /pembayaran - Proses Pembayaran Tunai (Kasir)",
           "event": [
             {
@@ -2725,6 +2765,42 @@
               "raw": "{{baseUrl}}/pembayaran",
               "host": ["{{baseUrl}}"],
               "path": ["pembayaran"]
+            }
+          }
+        },
+        {
+          "name": "PUT /pesanan/:id/items - Blocked Paid Order (Negative 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Paid order rejects item edit', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.meta.message.toLowerCase()).to.include('sudah dibayar');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"idMenu\": \"{{menuKode}}\", \"jumlah\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pesanan/{{createdPesananId}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["pesanan", "{{createdPesananId}}", "items"]
             }
           }
         },
@@ -3138,6 +3214,77 @@
               "raw": "{{baseUrl}}/laporan/rekap-gerai",
               "host": ["{{baseUrl}}"],
               "path": ["laporan", "rekap-gerai"]
+            }
+          }
+        },
+        {
+          "name": "GET /laporan/rekap-gerai?startDate&endDate - Date Range Filter (Superadmin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Rekap uses date range label', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array').that.is.not.empty;",
+                  "    pm.expect(json.data[0].tanggal).to.eql('2026-01-01 s/d 2026-12-31');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/laporan/rekap-gerai?startDate=2026-01-01&endDate=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["laporan", "rekap-gerai"],
+              "query": [
+                { "key": "startDate", "value": "2026-01-01" },
+                { "key": "endDate", "value": "2026-12-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /laporan/rekap-gerai?all=true - All-Time Filter (Superadmin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Rekap uses all-time label semua', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array').that.is.not.empty;",
+                  "    pm.expect(json.data[0].tanggal).to.eql('semua');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/laporan/rekap-gerai?all=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["laporan", "rekap-gerai"],
+              "query": [
+                { "key": "all", "value": "true" }
+              ]
             }
           }
         },
