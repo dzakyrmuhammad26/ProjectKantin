@@ -8,7 +8,7 @@ export interface NavbarProps {
   cardNumber?: string;
 }
 
-export function Navbar({ title = 'Kantin Darren', cardNumber }: NavbarProps) {
+export function Navbar({ title = 'Kantin Sentral Pujasera', cardNumber }: NavbarProps) {
   return (
     <header className="h-16 w-full bg-white border-b border-line sticky top-0 z-40">
       <div className="max-w-[1280px] h-full mx-auto px-4 sm:px-6 flex items-center justify-between">
@@ -23,7 +23,7 @@ export function Navbar({ title = 'Kantin Darren', cardNumber }: NavbarProps) {
           </Link>
         </div>
 
-        {/* Kartu Pelanggan Kanan (sesuai Panduan Desain Bagian 3: 'label berborder Kartu No. 23') */}
+        {/* Kartu Pelanggan Kanan */}
         {cardNumber && (
           <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-brand-50 border border-brand-700 rounded-[8px]">
             <span className="text-[12px] sm:text-[13px] font-semibold text-brand-700 whitespace-nowrap">

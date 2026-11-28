@@ -56,14 +56,27 @@ class CartController {
     return item ? item.qty : 0;
   }
 
-  validateCardNumber(cardNumber: string): { valid: boolean; error?: string } {
+  validateCardNumber(
+    cardNumber: string,
+    min = 1,
+    max = 99
+  ): { valid: boolean; error?: string } {
     const trimmed = cardNumber.trim();
     if (!trimmed) {
-      return { valid: false, error: 'Nomor kartu fisik wajib diisi (1 - 99)' };
+      return { valid: false, error: `Nomor kartu fisik wajib diisi (${min} - ${max})` };
+    }
+    if (!/^\d+$/.test(trimmed)) {
+      return {
+        valid: false,
+        error: `Nomor kartu harus berupa angka bulat antara ${min} sampai ${max}`,
+      };
     }
     const num = parseInt(trimmed, 10);
-    if (isNaN(num) || num < 1 || num > 99) {
-      return { valid: false, error: 'Nomor kartu harus berupa angka antara 1 sampai 99' };
+    if (isNaN(num) || num < min || num > max) {
+      return {
+        valid: false,
+        error: `Nomor kartu harus berupa angka antara ${min} sampai ${max}`,
+      };
     }
     return { valid: true };
   }

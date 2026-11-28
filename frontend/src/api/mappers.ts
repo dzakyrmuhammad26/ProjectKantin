@@ -1,6 +1,7 @@
 import { Gerai } from '@/models/gerai';
 import { Menu } from '@/models/menu';
 import { DetailPembayaran, MetodePembayaran } from '@/models/pembayaran';
+import { PengaturanKantin } from '@/models/pengaturan';
 import { Pengguna } from '@/models/pengguna';
 import { ItemPesanan, Pesanan } from '@/models/pesanan';
 import { SesiPelanggan } from '@/models/sesi';
@@ -12,6 +13,11 @@ function formatWaktuWIB(dateValue?: string | Date | null): string {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${hours}:${minutes} WIB`;
+}
+
+export function normalizeMenuImage(foto?: string | null): string {
+  if (!foto || foto === '/images/menu/placeholder.jpg') return '';
+  return foto;
 }
 
 export function mapGerai(raw: any): Gerai {
@@ -36,7 +42,7 @@ export function mapMenu(raw: any): Menu {
   const harga = Number(raw.harga ?? 0);
   const idGerai = raw.idGerai || '';
   const namaGerai = raw.namaGerai || '';
-  const foto = raw.foto || '/images/menu/placeholder.jpg';
+  const foto = normalizeMenuImage(raw.foto ?? raw.image);
   const isHabis = Boolean(raw.isHabis);
 
   return {
@@ -159,5 +165,19 @@ export function mapPesanan(raw: any): Pesanan {
     catatan: raw.catatan || undefined,
     pembayaran,
     payment: pembayaran,
+  };
+}
+
+export function mapPengaturan(raw: any): PengaturanKantin {
+  return {
+    namaKantin: raw?.namaKantin || 'Kantin Sentral Pujasera',
+    alamatKantin: raw?.alamatKantin || 'Gedung Kuliah Bersama Lt. 1',
+    nomorKartuMin: Number(raw?.nomorKartuMin ?? 1),
+    nomorKartuMax: Number(raw?.nomorKartuMax ?? 99),
+    teksFooterStruk:
+      raw?.teksFooterStruk || 'Terima kasih atas kunjungan Anda di Kantin Sentral!',
+    metodeBayarAktif: Array.isArray(raw?.metodeBayarAktif)
+      ? raw.metodeBayarAktif
+      : ['tunai', 'qris', 'debit'],
   };
 }

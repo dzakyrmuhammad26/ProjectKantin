@@ -2,13 +2,13 @@ import { penggunaApi } from '@/api/penggunaApi';
 import { Pengguna, PeranPengguna } from '@/models/pengguna';
 
 class AuthController {
-  async loginDenganPin(pin: string): Promise<Pengguna | null> {
+  async loginDenganPin(pin: string, username?: string): Promise<Pengguna | null> {
     const cleanPin = pin.trim();
     if (!cleanPin) {
       throw new Error('PIN wajib diisi');
     }
 
-    const user = await penggunaApi.verifikasiPin(cleanPin);
+    const user = await penggunaApi.verifikasiPin(cleanPin, username);
     if (!user) {
       throw new Error('PIN tidak ditemukan atau salah. Silakan coba lagi.');
     }
@@ -27,7 +27,7 @@ class AuthController {
 
   verifikasiAkses(user: Pengguna | null, peranDibutuhkan: PeranPengguna): boolean {
     if (!user || !user.aktif) return false;
-    if (user.peran === 'superadmin') return true; // Superadmin dapat mengakses semua
+    if (user.peran === 'superadmin') return true;
     return user.peran === peranDibutuhkan;
   }
 }

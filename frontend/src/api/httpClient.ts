@@ -1,3 +1,5 @@
+import { storage } from '@/services/storage';
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || 'http://localhost:5000/api';
 
@@ -18,12 +20,12 @@ export function getAuthToken(): string | null {
 }
 
 export function setAuthToken(token: string | null): void {
-  const storage = getLocalStorage();
-  if (!storage) return;
+  const storageObj = getLocalStorage();
+  if (!storageObj) return;
   if (token) {
-    storage.setItem(TOKEN_STORAGE_KEY, token);
+    storageObj.setItem(TOKEN_STORAGE_KEY, token);
   } else {
-    storage.removeItem(TOKEN_STORAGE_KEY);
+    storageObj.removeItem(TOKEN_STORAGE_KEY);
   }
 }
 
@@ -32,12 +34,12 @@ function getGuestToken(): string | null {
 }
 
 function setGuestToken(token: string | null): void {
-  const storage = getLocalStorage();
-  if (!storage) return;
+  const storageObj = getLocalStorage();
+  if (!storageObj) return;
   if (token) {
-    storage.setItem(GUEST_TOKEN_STORAGE_KEY, token);
+    storageObj.setItem(GUEST_TOKEN_STORAGE_KEY, token);
   } else {
-    storage.removeItem(GUEST_TOKEN_STORAGE_KEY);
+    storageObj.removeItem(GUEST_TOKEN_STORAGE_KEY);
   }
 }
 
@@ -134,8 +136,10 @@ export async function apiRequest<T = any>(
   const json = await response.json().catch(() => null);
 
   if (!response.ok) {
-    if (response.status === 401 && path === '/auth/me') {
+    const isLoginPath = path.startsWith('/auth/login') || path.startsWith('/auth/verify-pin');
+    if (response.status === 401 && !isLoginPath && getAuthToken()) {
       setAuthToken(null);
+      storage.setCurrentUser(null);
     }
     throw new Error(extractErrorMessage(json, `HTTP ${response.status} ${response.statusText}`));
   }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CartItem } from '@/models/pesanan';
 import { formatCurrency } from '@/utils/formatters';
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
 
 interface StallOrderCartProps {
   nomorKartu: string;
@@ -96,8 +97,9 @@ export function StallOrderCart({
       <button
         onClick={onSubmit}
         disabled={isSubmitting || cartItems.length === 0}
-        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs sm:text-sm font-bold transition-colors disabled:opacity-50 shadow-xs"
+        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs sm:text-sm font-bold transition-colors disabled:opacity-50 shadow-xs inline-flex items-center justify-center gap-2"
       >
+        {isSubmitting && <LoadingSpinner size="xs" variant="white" />}
         {isSubmitting ? 'Mengirim Pesanan...' : 'Simpan Pesanan Stan'}
       </button>
     </div>

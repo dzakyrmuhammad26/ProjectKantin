@@ -1,11 +1,17 @@
 'use client';
 
+import { useState } from 'react';
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
+
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export function AdminNavbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { currentUser, logout } = useAuth();
 
   const navLinks = [
     { label: 'Dashboard', href: '/admin/dashboard' },
@@ -13,7 +19,21 @@ export function AdminNavbar() {
     { label: 'Master Menu', href: '/admin/menu' },
     { label: 'Akun Staf', href: '/admin/users' },
     { label: 'Laporan Rekap', href: '/admin/reports' },
+    { label: 'Pengaturan', href: '/admin/settings' },
   ];
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      router.push('/auth');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 bg-[#111827] text-white border-b border-gray-800 shadow-sm">
@@ -33,7 +53,7 @@ export function AdminNavbar() {
           </div>
 
           {/* Nav Items */}
-          <nav className="hidden md:flex items-center gap-1.5">
+          <nav className="hidden lg:flex items-center gap-1">
             {navLinks.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -53,8 +73,13 @@ export function AdminNavbar() {
             })}
           </nav>
 
-          {/* Quick Shortcuts */}
+          {/* Quick Shortcuts & User Session */}
           <div className="flex items-center gap-2">
+            {currentUser && (
+              <span className="hidden xl:inline text-xs text-gray-300 mr-1">
+                {currentUser.nama}
+              </span>
+            )}
             <Link
               href="/cashier"
               prefetch={true}
@@ -69,17 +94,20 @@ export function AdminNavbar() {
             >
               Dapur Stan
             </Link>
-            <Link
-              href="/"
-              className="text-xs font-medium px-2.5 py-1.5 rounded bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-800/60 transition-colors"
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-800/60 transition-colors disabled:opacity-60"
             >
-              Keluar
-            </Link>
+              {isLoggingOut && <LoadingSpinner size="xs" variant="white" />}
+              {isLoggingOut ? 'Keluar...' : 'Keluar'}
+            </button>
           </div>
         </div>
 
-        {/* Mobile Navigation Row */}
-        <div className="flex md:hidden overflow-x-auto py-2 gap-1 border-t border-gray-800">
+        {/* Mobile / Tablet Navigation Row */}
+        <div className="flex lg:hidden overflow-x-auto py-2 gap-1 border-t border-gray-800">
           {navLinks.map((item) => {
             const isActive = pathname === item.href;
             return (

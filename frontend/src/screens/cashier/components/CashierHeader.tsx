@@ -1,6 +1,14 @@
+'use client';
+
+import { useState } from 'react';
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
+
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/utils/formatters';
+import { useAuth } from '@/context/AuthContext';
+import { PengaturanKantin } from '@/models/pengaturan';
 
 interface CashierHeaderProps {
   shiftSummary: {
@@ -8,36 +16,57 @@ interface CashierHeaderProps {
     pendingCount: number;
     paidCount: number;
   };
+  pengaturan?: PengaturanKantin;
 }
 
-export function CashierHeader({ shiftSummary }: CashierHeaderProps) {
+export function CashierHeader({ shiftSummary, pengaturan }: CashierHeaderProps) {
+  const router = useRouter();
+  const { currentUser, logout } = useAuth();
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      router.push('/auth');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-white px-6 py-3 shadow-xs">
-      <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-30 border-b border-line bg-white px-4 sm:px-6 py-3 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 text-white font-bold text-lg">
+          <Link
+            href="/"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 text-white font-bold text-lg hover:bg-brand-800 transition-colors"
+            title="Beranda"
+          >
             K
-          </span>
+          </Link>
           <div>
-            <h1 className="text-[17px] font-bold text-ink leading-tight">
-              Kasir Sentral — Kantin Darren
+            <h1 className="text-[16px] sm:text-[17px] font-bold text-ink leading-tight">
+              Kasir Sentral — {pengaturan?.namaKantin || 'Kantin Sentral'}
             </h1>
             <p className="text-[12px] text-muted">
-              Manajemen Pembayaran &amp; Antrean Pesanan Multi-Gerai
+              {currentUser ? `Kasir Aktif: ${currentUser.nama}` : 'Manajemen Pembayaran & Antrean Multi-Gerai'}
             </p>
           </div>
         </div>
 
-        {/* Quick Metrics Bar */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 border-r border-line pr-5">
+        {/* Quick Metrics & Actions */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-5">
+          <div className="flex items-center gap-2 border-r border-line pr-4">
             <span className="text-[12px] font-medium text-muted">Omzet Hari Ini:</span>
-            <span className="font-mono text-[16px] font-bold text-brand-700">
+            <span className="font-mono text-[15px] sm:text-[16px] font-bold text-brand-700">
               {formatCurrency(shiftSummary.totalRevenue)}
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-[13px]">
+          <div className="hidden md:flex items-center gap-2.5 text-[13px]">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 font-semibold text-amber-700 border border-amber-200">
               <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
               {shiftSummary.pendingCount} Menunggu Bayar
@@ -50,25 +79,20 @@ export function CashierHeader({ shiftSummary }: CashierHeaderProps) {
           <Link
             href="/customer"
             target="_blank"
-            className="ml-2 inline-flex items-center gap-1.5 rounded-lg border border-line bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-ink hover:bg-slate-100 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-ink hover:bg-slate-100 transition-colors"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-            Buka Layar Pelanggan
+            Layar Pelanggan
           </Link>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-[12px] font-semibold text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-60"
+          >
+            {isLoggingOut && <LoadingSpinner size="xs" variant="danger" />}
+            {isLoggingOut ? 'Keluar...' : 'Keluar'}
+          </button>
         </div>
       </div>
     </header>

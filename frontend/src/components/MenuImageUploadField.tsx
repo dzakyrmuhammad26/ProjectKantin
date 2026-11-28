@@ -1,6 +1,8 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
 import React, { useEffect, useState } from 'react';
+import { MENU_IMAGE_FALLBACK } from '@/utils/formatters';
 
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -57,7 +59,9 @@ export function MenuImageUploadField({
     onFileSelect(null);
   };
 
-  const previewSrc = objectUrl || imageUrl || '/images/menu/placeholder.jpg';
+  const normalizedUrl =
+    !imageUrl || imageUrl === '/images/menu/placeholder.jpg' ? '' : imageUrl;
+  const previewSrc = objectUrl || normalizedUrl || MENU_IMAGE_FALLBACK;
 
   return (
     <div className="flex flex-col gap-2">
@@ -65,14 +69,12 @@ export function MenuImageUploadField({
 
       <div className="flex items-center gap-3 p-2.5 border border-[#E5E7EB] rounded-lg bg-[#F9FAFB]">
         <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0 border border-[#E5E7EB]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={previewSrc}
             alt="Preview menu"
             className="w-full h-full object-cover"
             onError={(e) => {
-              e.currentTarget.src =
-                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56"><rect width="56" height="56" fill="%23E5E7EB"/></svg>';
+              e.currentTarget.src = MENU_IMAGE_FALLBACK;
             }}
           />
         </div>
@@ -113,7 +115,7 @@ export function MenuImageUploadField({
       {!selectedFile && (
         <input
           type="text"
-          value={imageUrl}
+          value={normalizedUrl}
           onChange={(e) => onImageUrlChange(e.target.value)}
           placeholder="Atau isi URL / path foto (opsional)"
           className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg text-xs text-[#4B5563] focus:outline-none focus:ring-1 focus:ring-emerald-500"

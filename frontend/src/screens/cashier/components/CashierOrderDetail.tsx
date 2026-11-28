@@ -1,4 +1,5 @@
 import React from 'react';
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
 import { Order, CartItem } from '@/models/pesanan';
 import { Stall } from '@/models/gerai';
 import { StatusLabel } from '@/components/StatusLabel';
@@ -10,6 +11,7 @@ interface CashierOrderDetailProps {
   selectedOrderItemsByStall: Record<string, CartItem[]>;
   stallMap: Map<string, Stall>;
   actionMessage: { type: 'success' | 'error'; text: string } | null;
+  updatingMenuId?: string | null;
   onOpenReceipt: (order: Order) => void;
   onUpdateItemQty: (menuItemId: string, newQty: number) => void;
 }
@@ -19,6 +21,7 @@ export function CashierOrderDetail({
   selectedOrderItemsByStall,
   stallMap,
   actionMessage,
+  updatingMenuId = null,
   onOpenReceipt,
   onUpdateItemQty,
 }: CashierOrderDetailProps) {
@@ -152,25 +155,35 @@ export function CashierOrderDetail({
                     {/* Kontrol Koreksi Qty Kasir */}
                     {pending ? (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => onUpdateItemQty(item.menuItem.id, item.qty - 1)}
-                          title="Kurangi / Hapus"
-                          className="flex h-6 w-6 items-center justify-center rounded border border-line bg-white text-[13px] font-bold text-ink hover:bg-slate-100"
-                        >
-                          −
-                        </button>
-                        <span className="w-5 text-center font-mono font-bold text-ink">
-                          {item.qty}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => onUpdateItemQty(item.menuItem.id, item.qty + 1)}
-                          title="Tambah"
-                          className="flex h-6 w-6 items-center justify-center rounded bg-brand-700 text-[13px] font-bold text-white hover:bg-brand-800"
-                        >
-                          +
-                        </button>
+                        {updatingMenuId === item.menuItem.id ? (
+                          <div className="flex h-6 w-[68px] items-center justify-center rounded border border-line bg-slate-50">
+                            <LoadingSpinner size="xs" variant="brand" />
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              disabled={updatingMenuId !== null}
+                              onClick={() => onUpdateItemQty(item.menuItem.id, item.qty - 1)}
+                              title="Kurangi / Hapus"
+                              className="flex h-6 w-6 items-center justify-center rounded border border-line bg-white text-[13px] font-bold text-ink hover:bg-slate-100 disabled:opacity-50"
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center font-mono font-bold text-ink">
+                              {item.qty}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={updatingMenuId !== null}
+                              onClick={() => onUpdateItemQty(item.menuItem.id, item.qty + 1)}
+                              title="Tambah"
+                              className="flex h-6 w-6 items-center justify-center rounded bg-brand-700 text-[13px] font-bold text-white hover:bg-brand-800 disabled:opacity-50"
+                            >
+                              +
+                            </button>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <span className="text-[13px] font-bold text-ink">

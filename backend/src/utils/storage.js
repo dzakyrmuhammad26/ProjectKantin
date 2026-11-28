@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import fs from 'fs/promises'
 import path from 'path'
+import sharp from 'sharp'
 import { v2 as cloudinary } from 'cloudinary'
 import {
   APP_URL,
@@ -8,6 +9,7 @@ import {
   CLOUDINARY_API_SECRET,
   CLOUDINARY_CLOUD_NAME,
 } from '../config/env.js'
+import { AppError } from './appError.js'
 
 const LOCAL_MENU_UPLOAD_DIR = path.resolve('uploads', 'menu')
 
@@ -23,6 +25,18 @@ const configureCloudinary = () => {
   })
 }
 
+const convertToWebp = async (buffer) => {
+  try {
+    return await sharp(buffer)
+      .rotate()
+      .resize({ width: 800, withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer()
+  } catch {
+    throw new AppError('File gambar tidak valid atau rusak', 400)
+  }
+}
+
 const uploadBufferToCloudinary = (buffer, originalName) => {
   configureCloudinary()
   const baseName = path
@@ -36,14 +50,7 @@ const uploadBufferToCloudinary = (buffer, originalName) => {
         folder: 'kantin-sentral/menu',
         public_id: `${baseName || 'menu'}-${Date.now()}`,
         resource_type: 'image',
-        transformation: [
-          {
-            width: 800,
-            crop: 'limit',
-            quality: 'auto',
-            fetch_format: 'auto',
-          },
-        ],
+        format: 'webp',
       },
       (error, result) => {
         if (error) return reject(error)
@@ -54,20 +61,13 @@ const uploadBufferToCloudinary = (buffer, originalName) => {
   })
 }
 
-const uploadBufferLocally = async (buffer, originalName, mimeType) => {
+const uploadBufferLocally = async (webpBuffer) => {
   await fs.mkdir(LOCAL_MENU_UPLOAD_DIR, { recursive: true })
 
-  const extFromMime = {
-    'image/jpeg': '.jpg',
-    'image/png': '.png',
-    'image/webp': '.webp',
-  }[mimeType]
-
-  const ext = extFromMime || path.extname(originalName || '').toLowerCase() || '.jpg'
-  const safeFilename = `menu-${Date.now()}-${crypto.randomUUID().slice(0, 8)}${ext}`
+  const safeFilename = `menu-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.webp`
   const targetPath = path.join(LOCAL_MENU_UPLOAD_DIR, safeFilename)
 
-  await fs.writeFile(targetPath, buffer)
+  await fs.writeFile(targetPath, webpBuffer)
 
   const baseUrl = APP_URL.replace(/\/+$/, '')
   return {
@@ -78,31 +78,33 @@ const uploadBufferLocally = async (buffer, originalName, mimeType) => {
 }
 
 /**
- * Mengunggah gambar menu ke Cloudinary jika terkonfigurasi,
- * atau fallback otomatis ke folder lokal uploads/menu.
+ * Mengonversi gambar ke format WebP (maks. lebar 800px, quality 80) lalu menyimpannya
+ * ke Cloudinary jika terkonfigurasi, atau fallback ke folder lokal uploads/menu.
  */
 export const uploadMenuImage = async (file) => {
+  const webpBuffer = await convertToWebp(file.buffer)
+
   if (isCloudinaryConfigured()) {
-    const result = await uploadBufferToCloudinary(file.buffer, file.originalname)
+    const result = await uploadBufferToCloudinary(webpBuffer, file.originalname)
     return {
       url: result.secure_url,
       publicId: result.public_id,
       provider: 'cloudinary',
-      size: file.size,
-      mimeType: file.mimetype,
+      size: webpBuffer.length,
+      mimeType: 'image/webp',
     }
   }
 
-  const localResult = await uploadBufferLocally(file.buffer, file.originalname, file.mimetype)
+  const localResult = await uploadBufferLocally(webpBuffer)
   return {
     ...localResult,
-    size: file.size,
-    mimeType: file.mimetype,
+    size: webpBuffer.length,
+    mimeType: 'image/webp',
   }
 }
 
 /**
- * Menghapus gambar berdasarkan publicId/nama file atau URL.
+ * Menghapus gambar berdasarkan publicId/nama file.
  */
 export const deleteMenuImage = async ({ publicId, provider } = {}) => {
   if (!publicId) return false

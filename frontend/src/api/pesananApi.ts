@@ -18,8 +18,20 @@ function serializeItems(items: ItemPesanan[]) {
 }
 
 export const pesananApi = {
-  async dapatkanSemua(): Promise<Pesanan[]> {
-    const list = await apiRequest<any[]>('/pesanan');
+  async dapatkanSemua(filter?: {
+    nomorKartu?: string;
+    idSesi?: string;
+    status?: StatusPesanan;
+    idGerai?: string;
+  }): Promise<Pesanan[]> {
+    const params = new URLSearchParams();
+    if (filter?.nomorKartu) params.set('nomorKartu', filter.nomorKartu);
+    if (filter?.idSesi) params.set('idSesi', filter.idSesi);
+    if (filter?.status) params.set('status', filter.status);
+    if (filter?.idGerai) params.set('idGerai', filter.idGerai);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+
+    const list = await apiRequest<any[]>(`/pesanan${qs}`);
     return list.map(mapPesanan);
   },
 
@@ -119,6 +131,14 @@ export const pesananApi = {
   },
 
   async dapatkanPesananTerakhir(): Promise<Pesanan | null> {
-    return Promise.resolve(storage.getLastOrder());
+    const cached = storage.getLastOrder();
+    if (!cached?.id) return null;
+
+    const latest = await this.dapatkanBerdasarkanId(cached.id);
+    if (latest) {
+      storage.setLastOrder(latest);
+      return latest;
+    }
+    return cached;
   },
 };

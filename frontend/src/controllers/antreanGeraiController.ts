@@ -30,20 +30,11 @@ class AntreanGeraiController {
         items: itemsMilikkita,
       };
 
-      if (
-        order.status === 'menunggu_bayar' ||
-        order.status === 'pending_payment'
-      ) {
+      if (order.status === 'menunggu_bayar' || order.status === 'pending_payment') {
         menungguBayar.push(orderFiltered);
-      } else if (
-        order.status === 'siap_dibuat' ||
-        order.status === 'ready_to_prepare'
-      ) {
+      } else if (order.status === 'siap_dibuat' || order.status === 'ready_to_prepare') {
         siapDibuat.push(orderFiltered);
-      } else if (
-        order.status === 'selesai' ||
-        order.status === 'completed'
-      ) {
+      } else if (order.status === 'selesai' || order.status === 'completed') {
         selesai.push(orderFiltered);
       }
     }
@@ -61,7 +52,6 @@ class AntreanGeraiController {
       throw new Error(`Pesanan dengan ID ${idPesanan} tidak ditemukan.`);
     }
 
-    // Pastikan pesanan sudah siap dibuat sebelum ditandai selesai
     if (order.status !== 'siap_dibuat' && order.status !== 'ready_to_prepare') {
       throw new Error('Pesanan belum dibayar atau status tidak valid untuk diselesaikan.');
     }

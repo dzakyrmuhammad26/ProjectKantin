@@ -1,5 +1,9 @@
 'use client';
 
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
+import { CustomerSummarySkeleton } from '@/components/loading/LoadingSkeletons';
+import { MotionFadeIn } from '@/components/loading/MotionFadeIn';
+
 import React from 'react';
 import { Navbar } from '@/components/Navbar';
 import { PageContainer } from '@/components/PageContainer';
@@ -7,12 +11,27 @@ import { Panel } from '@/components/Panel';
 import { Button } from '@/components/Button';
 import { StatusLabel } from '@/components/StatusLabel';
 import { OrderSummaryView } from '@/components/OrderSummaryView';
+import { StatusType } from '@/models/pesanan';
 import { useCompletedOrder } from './useCompletedOrder';
+
+function getOrderStatusView(status?: string): { type: StatusType; label: string } {
+  if (status === 'siap_dibuat' || status === 'ready_to_prepare') {
+    return { type: 'paid', label: 'Sudah dibayar • Sedang dibuat' };
+  }
+  if (status === 'selesai' || status === 'completed') {
+    return { type: 'done', label: 'Selesai siap diambil' };
+  }
+  if (status === 'batal' || status === 'cancelled') {
+    return { type: 'cancel', label: 'Dibatalkan' };
+  }
+  return { type: 'wait', label: 'Menunggu bayar' };
+}
 
 export function CompletedScreen() {
   const {
     completedOrder,
     cardNumber,
+    pengaturan,
     isOrderLoaded,
     stallMap,
     completedOrderItemsByStall,
@@ -22,27 +41,39 @@ export function CompletedScreen() {
   if (!isOrderLoaded || !completedOrder) {
     return (
       <div className="min-h-screen bg-surface">
-        <Navbar title="Kantin Darren" />
+        <Navbar title={pengaturan.namaKantin} />
         <PageContainer>
-          <div className="max-w-[588px] mx-auto py-16 text-center">
-            <p className="text-[14px] text-muted">Memeriksa status pesanan...</p>
-          </div>
+          <CustomerSummarySkeleton />
         </PageContainer>
       </div>
     );
   }
 
+  const statusView = getOrderStatusView(completedOrder.status);
+  const isLivePolling =
+    completedOrder.status === 'menunggu_bayar' ||
+    completedOrder.status === 'pending_payment' ||
+    completedOrder.status === 'siap_dibuat';
+
   return (
     <div className="min-h-screen bg-surface">
-      <Navbar title="Kantin Darren" cardNumber={cardNumber} />
+      <Navbar title={pengaturan.namaKantin} cardNumber={cardNumber} />
 
       <PageContainer>
-        <div className="max-w-[588px] mx-auto">
+        <MotionFadeIn className="max-w-[588px] mx-auto">
           <Panel className="p-4 sm:p-6 flex flex-col gap-5 sm:gap-6">
             {/* Header: Title and Big Card Number */}
             <div className="border-b border-line pb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
               <div>
-                <StatusLabel status="wait" label="Menunggu bayar" className="mb-1.5" />
+                <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                  <StatusLabel status={statusView.type} label={statusView.label} />
+                  {isLivePolling && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[11px] font-medium text-teal-700">
+                      <LoadingSpinner size="xs" variant="brand" />
+                      Pemantauan langsung
+                    </span>
+                  )}
+                </div>
                 <h1 className="text-[18px] sm:text-[20px] font-semibold text-ink leading-tight">
                   Pesanan terkirim
                 </h1>
@@ -62,12 +93,18 @@ export function CompletedScreen() {
 
             {/* Payment Notice */}
             <div className="border border-line bg-slate-50 rounded-lg p-3.5 sm:p-4">
-              <p className="text-[13px] sm:text-[14px] text-ink leading-relaxed">
-                Bayar di kasir dengan menunjukkan kartu{' '}
-                <strong className="font-semibold text-brand-700">
-                  {cardNumber ? `No. ${cardNumber}` : 'pesanan'}
-                </strong>. Pesanan dibuat setelah pembayaran.
-              </p>
+              {completedOrder.status === 'menunggu_bayar' || completedOrder.status === 'pending_payment' ? (
+                <p className="text-[13px] sm:text-[14px] text-ink leading-relaxed">
+                  Bayar di kasir dengan menunjukkan kartu{' '}
+                  <strong className="font-semibold text-brand-700">
+                    {cardNumber ? `No. ${cardNumber}` : 'pesanan'}
+                  </strong>. Pesanan dibuat setelah pembayaran.
+                </p>
+              ) : (
+                <p className="text-[13px] sm:text-[14px] text-ink leading-relaxed">
+                  Pesanan kartu <strong className="font-semibold text-brand-700">No. {cardNumber}</strong> telah tercatat lunas dan diteruskan ke masing-masing gerai.
+                </p>
+              )}
             </div>
 
             {/* Order Summary by Stall */}
@@ -85,7 +122,7 @@ export function CompletedScreen() {
               </Button>
             </div>
           </Panel>
-        </div>
+        </MotionFadeIn>
       </PageContainer>
     </div>
   );

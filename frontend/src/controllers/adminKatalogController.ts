@@ -1,12 +1,14 @@
 import { geraiApi } from '@/api/geraiApi';
 import { menuApi } from '@/api/menuApi';
+import { pengaturanApi } from '@/api/pengaturanApi';
 import { Gerai } from '@/models/gerai';
 import { Menu } from '@/models/menu';
+import { PengaturanKantin } from '@/models/pengaturan';
 
 class AdminKatalogController {
   // --- KELOLA GERAI (MURNI TANPA MODEL SEWA / RENTAL) ---
-  async getDaftarGerai(): Promise<Gerai[]> {
-    return await geraiApi.dapatkanSemua();
+  async getDaftarGerai(onlyActive = true): Promise<Gerai[]> {
+    return await geraiApi.dapatkanSemua(onlyActive);
   }
 
   async tambahGerai(data: {
@@ -25,9 +27,13 @@ class AdminKatalogController {
     return await geraiApi.perbaruiGerai(id, updates);
   }
 
+  async hapusGerai(id: string, permanent = false): Promise<boolean> {
+    return await geraiApi.hapusGerai(id, permanent);
+  }
+
   // --- KELOLA MASTER MENU GLOBAL ---
-  async getDaftarMenuSemua(): Promise<Menu[]> {
-    return await menuApi.dapatkanSemua();
+  async getDaftarMenuSemua(onlyActive = true): Promise<Menu[]> {
+    return await menuApi.dapatkanSemua(onlyActive);
   }
 
   async tambahMenuGlobal(data: {
@@ -48,8 +54,21 @@ class AdminKatalogController {
     return await menuApi.perbaruiMenu(id, updates);
   }
 
-  async hapusMenuGlobal(id: string): Promise<boolean> {
-    return await menuApi.hapusMenu(id);
+  async toggleStatusHabisGlobal(id: string): Promise<Menu> {
+    return await menuApi.toggleStatusHabis(id);
+  }
+
+  async hapusMenuGlobal(id: string, permanent = false): Promise<boolean> {
+    return await menuApi.hapusMenu(id, permanent);
+  }
+
+  // --- PENGATURAN KANTIN ---
+  async getPengaturan(): Promise<PengaturanKantin> {
+    return await pengaturanApi.dapatkanPengaturan();
+  }
+
+  async updatePengaturan(updates: Partial<PengaturanKantin>): Promise<PengaturanKantin> {
+    return await pengaturanApi.perbaruiPengaturan(updates);
   }
 }
 

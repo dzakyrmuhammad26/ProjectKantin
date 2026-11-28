@@ -1,5 +1,8 @@
 'use client';
 
+import { CustomerSummarySkeleton } from '@/components/loading/LoadingSkeletons';
+import { MotionFadeIn } from '@/components/loading/MotionFadeIn';
+
 import React from 'react';
 import { Navbar } from '@/components/Navbar';
 import { PageContainer } from '@/components/PageContainer';
@@ -16,6 +19,7 @@ export function ConfirmationScreen() {
     totalAmount,
     totalCount,
     isInitialized,
+    pengaturan,
     stallMap,
     isSubmitting,
     handleSubmitOrder,
@@ -25,11 +29,9 @@ export function ConfirmationScreen() {
   if (!isInitialized || items.length === 0) {
     return (
       <div className="min-h-screen bg-surface">
-        <Navbar title="Kantin Darren" cardNumber={cardNumber} />
+        <Navbar title={pengaturan.namaKantin} cardNumber={cardNumber} />
         <PageContainer>
-          <div className="max-w-[588px] mx-auto py-16 text-center">
-            <p className="text-[14px] text-muted">Memuat ringkasan pesanan...</p>
-          </div>
+          <CustomerSummarySkeleton />
         </PageContainer>
       </div>
     );
@@ -37,10 +39,10 @@ export function ConfirmationScreen() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <Navbar title="Kantin Darren" cardNumber={cardNumber} />
+      <Navbar title={pengaturan.namaKantin} cardNumber={cardNumber} />
 
       <PageContainer>
-        <div className="max-w-[588px] mx-auto">
+        <MotionFadeIn className="max-w-[588px] mx-auto">
           <Panel className="p-4 sm:p-6 flex flex-col gap-5 sm:gap-6">
             {/* Panel Header */}
             <div className="border-b border-line pb-3.5 sm:pb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -74,8 +76,7 @@ export function ConfirmationScreen() {
               </span>
               <p className="text-[12px] sm:text-[13px] text-muted leading-relaxed">
                 Pembayaran dilakukan di kasir sentral dengan menunjukkan kartu{' '}
-                <strong className="text-ink font-semibold">No. {cardNumber}</strong> (tunai atau QRIS).
-                Pesanan akan otomatis diteruskan dan mulai dibuat di masing-masing gerai setelah pembayaran lunas diverifikasi kasir.
+                <strong className="text-ink font-semibold">No. {cardNumber}</strong>. Pesanan akan otomatis diteruskan dan mulai dibuat di masing-masing gerai setelah pembayaran lunas diverifikasi kasir.
               </p>
             </div>
 
@@ -85,10 +86,11 @@ export function ConfirmationScreen() {
                 variant="primary"
                 size="large"
                 fullWidth
-                disabled={isSubmitting}
+                isLoading={isSubmitting}
+                loadingText="Mengirim pesanan..."
                 onClick={handleSubmitOrder}
               >
-                {isSubmitting ? 'Mengirim...' : 'Kirim pesanan'}
+                Kirim pesanan
               </Button>
               <Button
                 variant="secondary"
@@ -100,7 +102,7 @@ export function ConfirmationScreen() {
               </Button>
             </div>
           </Panel>
-        </div>
+        </MotionFadeIn>
       </PageContainer>
     </div>
   );

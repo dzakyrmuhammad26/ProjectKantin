@@ -18,4 +18,14 @@ export const uploadApi = {
       body: formData,
     });
   },
+
+  async deleteMenuImage(
+    publicId: string,
+    provider: 'cloudinary' | 'local' = 'local'
+  ): Promise<void> {
+    await apiRequest('/upload', {
+      method: 'DELETE',
+      body: JSON.stringify({ publicId, provider }),
+    });
+  },
 };

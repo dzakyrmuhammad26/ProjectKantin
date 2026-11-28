@@ -1,4 +1,5 @@
 import React from 'react';
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
 import { Gerai } from '@/models/gerai';
 
 interface AdminStallModalProps {
@@ -14,6 +15,7 @@ interface AdminStallModalProps {
   onPenyewaChange: (val: string) => void;
   warna: string;
   onWarnaChange: (val: string) => void;
+  isSubmitting?: boolean;
 }
 
 export function AdminStallModal({
@@ -29,6 +31,7 @@ export function AdminStallModal({
   onPenyewaChange,
   warna,
   onWarnaChange,
+  isSubmitting = false,
 }: AdminStallModalProps) {
   if (!isOpen) return null;
 
@@ -40,8 +43,10 @@ export function AdminStallModal({
             {editingGerai ? 'Edit Data Stan' : 'Tambah Stan Baru'}
           </h3>
           <button
+            type="button"
             onClick={onClose}
-            className="text-xs text-[#6B7280] hover:text-[#111827]"
+            disabled={isSubmitting}
+            className="text-xs text-[#6B7280] hover:text-[#111827] disabled:opacity-50"
           >
             Tutup
           </button>
@@ -56,7 +61,10 @@ export function AdminStallModal({
               onChange={(e) => onKodeChange(e.target.value)}
               placeholder="G05"
               required
-              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500 uppercase"
+              disabled={Boolean(editingGerai) || isSubmitting}
+              minLength={2}
+              maxLength={10}
+              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500 uppercase disabled:bg-gray-100 disabled:text-gray-500"
             />
           </div>
 
@@ -68,7 +76,9 @@ export function AdminStallModal({
               onChange={(e) => onNamaChange(e.target.value)}
               placeholder="Contoh: Bakso Solo Pak Min"
               required
-              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              minLength={2}
+              disabled={isSubmitting}
+              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
             />
           </div>
 
@@ -80,7 +90,9 @@ export function AdminStallModal({
               onChange={(e) => onPenyewaChange(e.target.value)}
               placeholder="Contoh: Pak Min"
               required
-              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              minLength={2}
+              disabled={isSubmitting}
+              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-50"
             />
           </div>
 
@@ -91,7 +103,8 @@ export function AdminStallModal({
                 type="color"
                 value={warna}
                 onChange={(e) => onWarnaChange(e.target.value)}
-                className="w-10 h-10 border-0 rounded cursor-pointer"
+                disabled={isSubmitting}
+                className="w-10 h-10 border-0 rounded cursor-pointer disabled:opacity-50"
               />
               <span className="font-mono text-xs text-[#4B5563]">{warna}</span>
             </div>
@@ -101,15 +114,18 @@ export function AdminStallModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-lg border border-[#D1D5DB] text-[#4B5563] hover:bg-[#F3F4F6]"
+              disabled={isSubmitting}
+              className="px-3.5 py-1.5 rounded-lg border border-[#D1D5DB] text-[#4B5563] hover:bg-[#F3F4F6] disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-70"
             >
-              Simpan
+              {isSubmitting && <LoadingSpinner size="xs" variant="white" />}
+              {isSubmitting ? 'Menyimpan...' : 'Simpan'}
             </button>
           </div>
         </form>

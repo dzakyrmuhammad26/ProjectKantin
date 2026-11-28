@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pesanan } from '@/models/pesanan';
 import { formatCurrency } from '@/utils/formatters';
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
 
 interface StallQueueColumnProps {
   title: string;
@@ -8,6 +9,7 @@ interface StallQueueColumnProps {
   orders: Pesanan[];
   type: 'waiting' | 'ready' | 'done';
   onComplete?: (id: string) => void;
+  completingOrderId?: string | null;
 }
 
 export function StallQueueColumn({
@@ -16,6 +18,7 @@ export function StallQueueColumn({
   orders,
   type,
   onComplete,
+  completingOrderId = null,
 }: StallQueueColumnProps) {
   const isWaiting = type === 'waiting';
   const isReady = type === 'ready';
@@ -112,9 +115,11 @@ export function StallQueueColumn({
                   {onComplete && (
                     <button
                       onClick={() => onComplete(order.id)}
-                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
+                      disabled={completingOrderId === order.id}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-xs inline-flex items-center justify-center gap-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      Tandai Selesai
+                      {completingOrderId === order.id && <LoadingSpinner size="xs" variant="white" />}
+                      {completingOrderId === order.id ? 'Menyelesaikan...' : 'Tandai Selesai'}
                     </button>
                   )}
                 </div>

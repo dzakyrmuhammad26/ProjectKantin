@@ -4,8 +4,9 @@ import { apiRequest, getAuthToken, setAuthToken } from './httpClient';
 import { mapPengguna } from './mappers';
 
 export const penggunaApi = {
-  async dapatkanSemua(): Promise<Pengguna[]> {
-    const list = await apiRequest<any[]>('/pengguna?aktif=true');
+  async dapatkanSemua(onlyActive = true): Promise<Pengguna[]> {
+    const query = onlyActive ? '?aktif=true' : '';
+    const list = await apiRequest<any[]>(`/pengguna${query}`);
     return list.map(mapPengguna);
   },
 
@@ -18,24 +19,25 @@ export const penggunaApi = {
     }
   },
 
-  async verifikasiPin(pin: string): Promise<Pengguna | null> {
-    try {
-      const data = await apiRequest<{ user: any; access_token: string }>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ pin: pin.trim() }),
-      });
+  async verifikasiPin(pin: string, username?: string): Promise<Pengguna | null> {
+    const body: Record<string, string> = { pin: pin.trim() };
+    if (username?.trim()) {
+      body.username = username.trim().toLowerCase();
+    }
 
-      if (!data?.user || !data?.access_token) {
-        return null;
-      }
+    const data = await apiRequest<{ user: any; access_token: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
 
-      setAuthToken(data.access_token);
-      const user = mapPengguna(data.user);
-      storage.setCurrentUser(user);
-      return user;
-    } catch {
+    if (!data?.user || !data?.access_token) {
       return null;
     }
+
+    setAuthToken(data.access_token);
+    const user = mapPengguna(data.user);
+    storage.setCurrentUser(user);
+    return user;
   },
 
   async buatPengguna(data: Omit<Pengguna, 'id'>): Promise<Pengguna> {
@@ -46,7 +48,7 @@ export const penggunaApi = {
         username: data.username,
         pin: data.pin,
         peran: data.peran,
-        idGerai: data.idGerai || null,
+        idGerai: data.peran === 'gerai' ? data.idGerai || null : null,
         aktif: data.aktif !== false,
       }),
     });
@@ -77,10 +79,18 @@ export const penggunaApi = {
     return true;
   },
 
+  async hapusPengguna(id: string, permanent = false): Promise<boolean> {
+    const query = permanent ? '?permanent=true' : '';
+    await apiRequest(`/pengguna/${encodeURIComponent(id)}${query}`, {
+      method: 'DELETE',
+    });
+    return true;
+  },
+
   async getSession(): Promise<Pengguna | null> {
     const token = getAuthToken();
     if (!token) {
-      return storage.getCurrentUser();
+      return null;
     }
 
     try {

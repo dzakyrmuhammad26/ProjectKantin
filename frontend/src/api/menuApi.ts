@@ -3,8 +3,9 @@ import { apiRequest } from './httpClient';
 import { mapMenu } from './mappers';
 
 export const menuApi = {
-  async dapatkanSemua(): Promise<Menu[]> {
-    const list = await apiRequest<any[]>('/menu?aktif=true');
+  async dapatkanSemua(onlyActive = true): Promise<Menu[]> {
+    const query = onlyActive ? '?aktif=true' : '';
+    const list = await apiRequest<any[]>(`/menu${query}`);
     return list.map(mapMenu);
   },
 
@@ -42,7 +43,7 @@ export const menuApi = {
         idGerai: data.idGerai,
         namaGerai: data.namaGerai,
         kategori: data.kategori || 'makanan',
-        foto: data.foto || '/images/menu/placeholder.jpg',
+        foto: data.foto || undefined,
         urutan: data.urutan ?? 99,
         isFavorit: Boolean(data.isFavorit),
       }),
@@ -85,31 +86,22 @@ export const menuApi = {
     return mapMenu(updated);
   },
 
-  async toggleStatusHabis(id: string): Promise<Menu> {
+  async toggleStatusHabis(
+    id: string,
+    body?: { isHabis?: boolean; aktif?: boolean; isFavorit?: boolean }
+  ): Promise<Menu> {
     const updated = await apiRequest<any>(`/menu/${encodeURIComponent(id)}/toggle-habis`, {
       method: 'PATCH',
-      body: JSON.stringify({}),
+      body: JSON.stringify(body || {}),
     });
     return mapMenu(updated);
   },
 
-  async hapusMenu(id: string): Promise<boolean> {
-    await apiRequest(`/menu/${encodeURIComponent(id)}`, {
+  async hapusMenu(id: string, permanent = false): Promise<boolean> {
+    const query = permanent ? '?permanent=true' : '';
+    await apiRequest(`/menu/${encodeURIComponent(id)}${query}`, {
       method: 'DELETE',
     });
     return true;
-  },
-
-  // Kompatibilitas kode lama
-  async getAll(): Promise<Menu[]> {
-    return this.dapatkanSemua();
-  },
-
-  async getById(id: string): Promise<Menu | null> {
-    return this.dapatkanBerdasarkanId(id);
-  },
-
-  async getByStallId(stallId: string): Promise<Menu[]> {
-    return this.dapatkanBerdasarkanGerai(stallId);
   },
 };

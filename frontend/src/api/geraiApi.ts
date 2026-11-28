@@ -3,8 +3,9 @@ import { apiRequest } from './httpClient';
 import { mapGerai } from './mappers';
 
 export const geraiApi = {
-  async dapatkanSemua(): Promise<Gerai[]> {
-    const list = await apiRequest<any[]>('/gerai?aktif=true');
+  async dapatkanSemua(onlyActive = true): Promise<Gerai[]> {
+    const query = onlyActive ? '?aktif=true' : '';
+    const list = await apiRequest<any[]>(`/gerai${query}`);
     return list.map(mapGerai);
   },
 
@@ -61,12 +62,11 @@ export const geraiApi = {
     return mapGerai(updated);
   },
 
-  // Kompatibilitas kode lama
-  async getAll(): Promise<Gerai[]> {
-    return this.dapatkanSemua();
-  },
-
-  async getById(id: string): Promise<Gerai | null> {
-    return this.dapatkanBerdasarkanId(id);
+  async hapusGerai(id: string, permanent = false): Promise<boolean> {
+    const query = permanent ? '?permanent=true' : '';
+    await apiRequest(`/gerai/${encodeURIComponent(id)}${query}`, {
+      method: 'DELETE',
+    });
+    return true;
   },
 };

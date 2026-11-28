@@ -4,18 +4,22 @@ import { useState, useEffect, useCallback } from 'react';
 import { Gerai } from '@/models/gerai';
 import { Menu } from '@/models/menu';
 import { CartItem } from '@/models/pesanan';
-import geraiController from '@/controllers/geraiController';
+import { PengaturanKantin } from '@/models/pengaturan';
+import stallController from '@/controllers/stallController';
 import menuGeraiController from '@/controllers/menuGeraiController';
 import cartController from '@/controllers/cartController';
 import orderController from '@/controllers/orderController';
+import pengaturanController from '@/controllers/pengaturanController';
+import { useAuth } from '@/context/AuthContext';
 
 export function useStallOrder() {
+  const { currentUser } = useAuth();
   const [daftarGerai, setDaftarGerai] = useState<Gerai[]>([]);
   const [geraiAktif, setGeraiAktif] = useState<Gerai | null>(null);
   const [menuList, setMenuList] = useState<Menu[]>([]);
+  const [pengaturan, setPengaturan] = useState<PengaturanKantin>(pengaturanController.getDefault());
   const [isLoading, setIsLoading] = useState(true);
 
-  // Cart lokal pesanan stan
   const [nomorKartu, setNomorKartu] = useState<string>('');
   const [nomorMeja, setNomorMeja] = useState<string>('');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -25,17 +29,25 @@ export function useStallOrder() {
   useEffect(() => {
     async function init() {
       try {
-        const stalls = await geraiController.getStalls();
+        const [stalls, settingData] = await Promise.all([
+          stallController.getStalls(),
+          pengaturanController.getPengaturan(),
+        ]);
         setDaftarGerai(stalls);
+        setPengaturan(settingData);
         if (stalls.length > 0) {
-          setGeraiAktif(stalls[0]);
+          const matchedUserStall =
+            currentUser?.peran === 'gerai' && currentUser.idGerai
+              ? stalls.find((s) => s.id === currentUser.idGerai || s.kode === currentUser.idGerai)
+              : null;
+          setGeraiAktif(matchedUserStall || stalls[0]);
         }
       } finally {
         setIsLoading(false);
       }
     }
     init();
-  }, []);
+  }, [currentUser?.peran, currentUser?.idGerai]);
 
   const loadMenuStan = useCallback(async (gId: string) => {
     try {
@@ -69,8 +81,13 @@ export function useStallOrder() {
   const { totalCount, totalAmount } = cartController.calculateTotals(cartItems);
 
   const handleSubmitPesananStan = async () => {
-    if (!nomorKartu.trim()) {
-      alert('Masukkan nomor kartu fisik pelanggan (1 - 99)');
+    const validation = cartController.validateCardNumber(
+      nomorKartu,
+      pengaturan.nomorKartuMin,
+      pengaturan.nomorKartuMax
+    );
+    if (!validation.valid) {
+      alert(validation.error || 'Masukkan nomor kartu fisik pelanggan yang valid');
       return;
     }
     if (cartItems.length === 0) {
@@ -85,7 +102,14 @@ export function useStallOrder() {
         nomorKartu.trim(),
         cartItems,
         totalAmount,
-        meja
+        {
+          nomorMeja: meja,
+          idGerai: geraiAktif?.kode,
+          namaGerai: geraiAktif?.nama,
+          sumber: 'gerai',
+          minCard: pengaturan.nomorKartuMin,
+          maxCard: pengaturan.nomorKartuMax,
+        }
       );
 
       setSuccessInfo(
@@ -105,6 +129,7 @@ export function useStallOrder() {
     daftarGerai,
     geraiAktif,
     menuList,
+    pengaturan,
     isLoading,
     nomorKartu,
     setNomorKartu,

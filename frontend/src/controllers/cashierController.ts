@@ -1,9 +1,10 @@
-import { cashierApi, pembayaranApi } from '@/api/pembayaranApi';
+import { pembayaranApi } from '@/api/pembayaranApi';
 import { pesananApi } from '@/api/pesananApi';
+import { sesiApi } from '@/api/sesiApi';
 import cartController from './cartController';
 import { CartItem, Order, OrderStatus } from '@/models/pesanan';
 import { DetailPembayaran, PaymentDetails, PaymentMethod } from '@/models/pembayaran';
-import { formatTime } from '@/utils/formatters';
+import { formatTime, isCashMethod } from '@/utils/formatters';
 
 class CashierController {
   async getOrders(statusFilter: 'all' | OrderStatus = 'all'): Promise<Order[]> {
@@ -52,30 +53,55 @@ class CashierController {
     method: PaymentMethod,
     amountPaid: number,
     totalAmount: number,
-    idKasir?: string
+    options?: {
+      idKasir?: string;
+      referensiQris?: string;
+    }
   ): Promise<Order> {
-    if ((method === 'cash' || method === 'tunai') && amountPaid < totalAmount) {
+    const normalizedMethod: PaymentMethod = method === 'cash' ? 'tunai' : method;
+    const isCash = isCashMethod(normalizedMethod);
+
+    if (isCash && amountPaid < totalAmount) {
       throw new Error(
         `Jumlah uang tunai kurang. Total: Rp ${totalAmount}, Diterima: Rp ${amountPaid}`
       );
     }
 
-    const change =
-      method === 'cash' || method === 'tunai' ? Math.max(0, amountPaid - totalAmount) : 0;
+    const effectivePaid = isCash ? amountPaid : totalAmount;
+    const change = isCash ? Math.max(0, amountPaid - totalAmount) : 0;
 
     const payment: PaymentDetails = {
-      method,
-      metode: method,
-      amountPaid: method === 'cash' || method === 'tunai' ? amountPaid : totalAmount,
-      uangDiterima: method === 'cash' || method === 'tunai' ? amountPaid : totalAmount,
+      method: normalizedMethod,
+      metode: normalizedMethod,
+      totalTagihan: totalAmount,
+      amountPaid: effectivePaid,
+      uangDiterima: effectivePaid,
       change,
       kembalian: change,
       paidAt: formatTime(),
       waktuBayar: formatTime(),
-      idKasir,
+      idKasir: options?.idKasir,
+      referensiQris: normalizedMethod === 'qris' ? options?.referensiQris : undefined,
     };
 
-    return await cashierApi.processPayment(orderId, payment);
+    const updatedOrder = await pembayaranApi.prosesPembayaran(orderId, payment);
+
+    // Tutup sesi kartu jika semua pesanan dalam sesi tersebut sudah dibayar
+    if (updatedOrder.idSesi) {
+      try {
+        const sesiOrders = await pesananApi.dapatkanBerdasarkanSesi(updatedOrder.idSesi);
+        const stillPending = sesiOrders.some(
+          (o) => o.status === 'menunggu_bayar' || o.status === 'pending_payment'
+        );
+        if (!stillPending) {
+          await sesiApi.tutupSesi(updatedOrder.idSesi);
+        }
+      } catch {
+        // Jangan gagalkan transaksi pembayaran utama bila sinkronisasi tutup sesi gagal
+      }
+    }
+
+    return updatedOrder;
   }
 
   async processMultiOrderPayment(
@@ -83,27 +109,35 @@ class CashierController {
     method: PaymentMethod,
     amountPaid: number,
     totalAmount: number,
-    idKasir?: string
+    options?: {
+      idKasir?: string;
+      referensiQris?: string;
+    }
   ): Promise<Order[]> {
-    if ((method === 'cash' || method === 'tunai') && amountPaid < totalAmount) {
+    const normalizedMethod: PaymentMethod = method === 'cash' ? 'tunai' : method;
+    const isCash = isCashMethod(normalizedMethod);
+
+    if (isCash && amountPaid < totalAmount) {
       throw new Error(
         `Jumlah uang tunai kurang. Total: Rp ${totalAmount}, Diterima: Rp ${amountPaid}`
       );
     }
 
-    const change =
-      method === 'cash' || method === 'tunai' ? Math.max(0, amountPaid - totalAmount) : 0;
+    const effectivePaid = isCash ? amountPaid : totalAmount;
+    const change = isCash ? Math.max(0, amountPaid - totalAmount) : 0;
 
     const payment: DetailPembayaran = {
-      method,
-      metode: method,
-      amountPaid: method === 'cash' || method === 'tunai' ? amountPaid : totalAmount,
-      uangDiterima: method === 'cash' || method === 'tunai' ? amountPaid : totalAmount,
+      method: normalizedMethod,
+      metode: normalizedMethod,
+      totalTagihan: totalAmount,
+      amountPaid: effectivePaid,
+      uangDiterima: effectivePaid,
       change,
       kembalian: change,
       paidAt: formatTime(),
       waktuBayar: formatTime(),
-      idKasir,
+      idKasir: options?.idKasir,
+      referensiQris: normalizedMethod === 'qris' ? options?.referensiQris : undefined,
     };
 
     return await pembayaranApi.prosesPembayaranMulti(orderIds, payment);
@@ -114,25 +148,26 @@ class CashierController {
     updatedItems: CartItem[]
   ): Promise<Order> {
     if (updatedItems.length === 0) {
-      return await cashierApi.cancelOrder(orderId);
+      return await pesananApi.batalkanPesanan(orderId);
     }
 
     const { totalAmount } = cartController.calculateTotals(updatedItems);
-    return await cashierApi.updateOrderItems(orderId, updatedItems, totalAmount);
+    return await pesananApi.perbaruiItem(orderId, updatedItems, totalAmount);
   }
 
   async cancelOrder(orderId: string): Promise<Order> {
-    return await cashierApi.cancelOrder(orderId);
+    return await pesananApi.batalkanPesanan(orderId);
   }
 
   async markAsCompleted(orderId: string): Promise<Order> {
-    return await cashierApi.updateStatus(orderId, 'completed');
+    return await pesananApi.perbaruiStatus(orderId, 'selesai');
   }
 
   calculateShiftSummary(orders: Order[]) {
     let totalRevenue = 0;
     let cashRevenue = 0;
     let qrisRevenue = 0;
+    let debitRevenue = 0;
     let pendingCount = 0;
     let paidCount = 0;
     let completedCount = 0;
@@ -147,10 +182,12 @@ class CashierController {
       if (isPaid) {
         totalRevenue += order.total;
         const method = order.payment?.method || order.pembayaran?.metode;
-        if (method === 'cash' || method === 'tunai') {
+        if (isCashMethod(method)) {
           cashRevenue += order.total;
         } else if (method === 'qris') {
           qrisRevenue += order.total;
+        } else if (method === 'debit') {
+          debitRevenue += order.total;
         }
       }
 
@@ -163,6 +200,7 @@ class CashierController {
       totalRevenue,
       cashRevenue,
       qrisRevenue,
+      debitRevenue,
       pendingCount,
       paidCount,
       completedCount,

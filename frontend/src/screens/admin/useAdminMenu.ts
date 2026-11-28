@@ -10,6 +10,7 @@ export function useAdminMenu() {
   const [menuList, setMenuList] = useState<Menu[]>([]);
   const [geraiList, setGeraiList] = useState<Gerai[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [busyMenuId, setBusyMenuId] = useState<string | null>(null);
   const [selectedGeraiFilter, setSelectedGeraiFilter] = useState('semua');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -29,18 +30,18 @@ export function useAdminMenu() {
   const loadData = useCallback(async () => {
     try {
       const [menus, stalls] = await Promise.all([
-        adminKatalogController.getDaftarMenuSemua(),
-        adminKatalogController.getDaftarGerai(),
+        adminKatalogController.getDaftarMenuSemua(true),
+        adminKatalogController.getDaftarGerai(true),
       ]);
       setMenuList(menus);
       setGeraiList(stalls);
-      if (stalls.length > 0 && !formIdGerai) {
-        setFormIdGerai(stalls[0].id);
+      if (stalls.length > 0) {
+        setFormIdGerai((prev) => prev || stalls[0].id);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [formIdGerai]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -55,7 +56,7 @@ export function useAdminMenu() {
     setFormNama('');
     setFormHarga(15000);
     setFormKategori('makanan');
-    setFormFoto('/images/menu/placeholder.jpg');
+    setFormFoto('');
     setIsModalOpen(true);
   };
 
@@ -67,7 +68,7 @@ export function useAdminMenu() {
     setFormNama(menu.nama || menu.name);
     setFormHarga(menu.harga || menu.price);
     setFormKategori((menu.kategori as any) || 'makanan');
-    setFormFoto(menu.foto || menu.image || '/images/menu/placeholder.jpg');
+    setFormFoto(menu.foto || menu.image || '');
     setIsModalOpen(true);
   };
 
@@ -78,7 +79,7 @@ export function useAdminMenu() {
 
     try {
       setIsSubmitting(true);
-      let finalFotoUrl = formFoto.trim() || '/images/menu/placeholder.jpg';
+      let finalFotoUrl = formFoto.trim() || undefined;
       if (selectedFile) {
         const uploaded = await uploadApi.uploadMenuImage(selectedFile);
         finalFotoUrl = uploaded.url;
@@ -86,10 +87,11 @@ export function useAdminMenu() {
 
       if (editingMenu) {
         await adminKatalogController.ubahMenuGlobal(editingMenu.id, {
+          kode: formKode.trim(),
           nama: formNama.trim(),
           harga: formHarga,
           kategori: formKategori,
-          foto: finalFotoUrl,
+          foto: finalFotoUrl || '/images/menu/placeholder.jpg',
         });
         setFeedback(`Menu "${formNama}" berhasil diperbarui.`);
       } else {
@@ -116,10 +118,27 @@ export function useAdminMenu() {
     }
   };
 
+  const handleToggleHabis = async (menu: Menu) => {
+    if (busyMenuId) return;
+    setBusyMenuId(menu.id);
+    try {
+      await adminKatalogController.toggleStatusHabisGlobal(menu.id);
+      setFeedback(`Status stok "${menu.nama || menu.name}" berhasil diperbarui.`);
+      await loadData();
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengubah status stok');
+    } finally {
+      setBusyMenuId(null);
+    }
+  };
+
   const handleHapus = async (menu: Menu) => {
+    if (busyMenuId) return;
     const confirmDelete = window.confirm(`Hapus menu "${menu.nama || menu.name}"?`);
     if (!confirmDelete) return;
 
+    setBusyMenuId(menu.id);
     try {
       await adminKatalogController.hapusMenuGlobal(menu.id);
       setFeedback(`Menu "${menu.nama || menu.name}" berhasil dihapus.`);
@@ -127,6 +146,8 @@ export function useAdminMenu() {
       setTimeout(() => setFeedback(null), 3000);
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus menu');
+    } finally {
+      setBusyMenuId(null);
     }
   };
 
@@ -151,6 +172,7 @@ export function useAdminMenu() {
     geraiList,
     filtered,
     isLoading,
+    busyMenuId,
     selectedGeraiFilter,
     setSelectedGeraiFilter,
     searchQuery,
@@ -177,6 +199,7 @@ export function useAdminMenu() {
     handleBukaTambah,
     handleBukaEdit,
     handleSimpan,
+    handleToggleHabis,
     handleHapus,
   };
 }

@@ -3,8 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Stall } from '@/models/gerai';
+import { PengaturanKantin } from '@/models/pengaturan';
 import orderController from '@/controllers/orderController';
 import stallController from '@/controllers/stallController';
+import pengaturanController from '@/controllers/pengaturanController';
 import { useCart } from '@/context/CartContext';
 
 export function useConfirmation() {
@@ -20,37 +22,45 @@ export function useConfirmation() {
   } = useCart();
 
   const [stalls, setStalls] = useState<Stall[]>([]);
+  const [pengaturan, setPengaturan] = useState<PengaturanKantin>(pengaturanController.getDefault());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load stalls for header/colors
+  // Load stalls and settings
   useEffect(() => {
-    stallController.getStalls().then(setStalls);
+    Promise.all([
+      stallController.getStalls(),
+      pengaturanController.getPengaturan(),
+    ]).then(([stallData, settingData]) => {
+      setStalls(stallData);
+      setPengaturan(settingData);
+    });
   }, []);
 
   const stallMap = useMemo(() => {
     return stallController.getStallMap(stalls);
   }, [stalls]);
 
-  // Prefetch complete route for instant submission transition
   useEffect(() => {
     router.prefetch('/customer/complete');
     router.prefetch('/customer');
   }, [router]);
 
-  // Redirect if cart is empty
   useEffect(() => {
     if (isInitialized && items.length === 0 && !isSubmitting) {
       router.replace('/customer');
     }
   }, [isInitialized, items.length, isSubmitting, router]);
 
-  // Submit order through orderController
   const handleSubmitOrder = async () => {
     if (items.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
 
     try {
-      await orderController.createOrder(cardNumber, items, totalAmount);
+      await orderController.createOrder(cardNumber, items, totalAmount, {
+        sumber: 'pelanggan',
+        minCard: pengaturan.nomorKartuMin,
+        maxCard: pengaturan.nomorKartuMax,
+      });
       clearCart();
       router.push('/customer/complete');
     } catch (err: any) {
@@ -59,7 +69,6 @@ export function useConfirmation() {
     }
   };
 
-  // Back to edit order in menu
   const handleEditOrder = () => {
     router.push(cardNumber ? `/customer?card=${encodeURIComponent(cardNumber)}` : '/customer');
   };
@@ -71,6 +80,7 @@ export function useConfirmation() {
     totalAmount,
     totalCount,
     isInitialized,
+    pengaturan,
     stallMap,
     isSubmitting,
     handleSubmitOrder,

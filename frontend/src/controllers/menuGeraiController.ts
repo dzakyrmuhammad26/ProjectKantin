@@ -28,8 +28,8 @@ class MenuGeraiController {
     if (!data.nama.trim()) {
       throw new Error('Nama menu wajib diisi');
     }
-    if (data.harga <= 0) {
-      throw new Error('Harga menu harus lebih besar dari 0');
+    if (data.harga < 0) {
+      throw new Error('Harga menu tidak boleh negatif');
     }
 
     return await menuApi.buatMenu({
@@ -54,8 +54,8 @@ class MenuGeraiController {
       throw new Error('Anda tidak memiliki hak untuk mengubah menu dari gerai lain');
     }
 
-    if (updates.harga !== undefined && updates.harga <= 0) {
-      throw new Error('Harga menu harus lebih besar dari 0');
+    if (updates.harga !== undefined && updates.harga < 0) {
+      throw new Error('Harga menu tidak boleh negatif');
     }
 
     return await menuApi.perbaruiMenu(idMenu, updates);

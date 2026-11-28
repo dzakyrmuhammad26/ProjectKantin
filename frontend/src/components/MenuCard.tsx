@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { memo } from 'react';
 import { Menu } from '@/models/menu';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, MENU_IMAGE_FALLBACK } from '@/utils/formatters';
 import { Stepper } from './Stepper';
 
 export interface MenuCardProps {
@@ -24,8 +24,12 @@ function MenuCardComponent({
   const isSelected = qty > 0;
   const isSoldOut = Boolean(item.isSoldOut || item.isHabis);
 
-  const placeholderImg =
-    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="104" height="104" viewBox="0 0 104 104"><rect width="104" height="104" fill="%23F1F1EF"/></svg>';
+  const imgSrc =
+    item.foto && item.foto !== '/images/menu/placeholder.jpg'
+      ? item.foto
+      : item.image && item.image !== '/images/menu/placeholder.jpg'
+      ? item.image
+      : MENU_IMAGE_FALLBACK;
 
   const handleQtyChange = (newVal: number) => {
     if (newVal > qty) {
@@ -47,10 +51,10 @@ function MenuCardComponent({
           : 'border-line hover:border-slate-300'
       } ${isSoldOut ? 'opacity-60 bg-slate-50/50' : ''}`}
     >
-      {/* Photo: Square aspect ratio on mobile, fixed 104x104 on sm+ */}
+      {/* Photo */}
       <div className="w-full sm:w-[104px] aspect-square sm:aspect-auto sm:h-[104px] rounded-[6px] sm:rounded-[8px] bg-[#F1F1EF] shrink-0 overflow-hidden relative">
         <img
-          src={item.foto || item.image || placeholderImg}
+          src={imgSrc}
           alt={item.nama || item.name}
           width={104}
           height={104}
@@ -60,7 +64,7 @@ function MenuCardComponent({
             isSoldOut ? 'grayscale contrast-75' : ''
           }`}
           onError={(e) => {
-            e.currentTarget.src = placeholderImg;
+            e.currentTarget.src = MENU_IMAGE_FALLBACK;
           }}
         />
       </div>
@@ -80,7 +84,7 @@ function MenuCardComponent({
           </span>
         </div>
 
-        {/* Bottom Row / Stack: Price & Stepper */}
+        {/* Price & Stepper */}
         <div className="mt-auto pt-1.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-1">
           <span
             className={`text-[11px] sm:text-[16px] font-bold truncate ${

@@ -1,13 +1,15 @@
+/* eslint-disable @next/next/no-img-element */
 import React from 'react';
-import Image from 'next/image';
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
 import { Menu } from '@/models/menu';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, MENU_IMAGE_FALLBACK } from '@/utils/formatters';
 
 interface StallMenuCardProps {
   menu: Menu;
   onToggleHabis: (menu: Menu) => void;
   onEdit: (menu: Menu) => void;
   onDelete: (menu: Menu) => void;
+  busyMenuId?: string | null;
 }
 
 export function StallMenuCard({
@@ -15,8 +17,16 @@ export function StallMenuCard({
   onToggleHabis,
   onEdit,
   onDelete,
+  busyMenuId = null,
 }: StallMenuCardProps) {
+  const isBusy = busyMenuId === menu.id;
   const isHabis = menu.isHabis || menu.isSoldOut;
+  const imgSrc =
+    menu.foto && menu.foto !== '/images/menu/placeholder.jpg'
+      ? menu.foto
+      : menu.image && menu.image !== '/images/menu/placeholder.jpg'
+      ? menu.image
+      : MENU_IMAGE_FALLBACK;
 
   return (
     <div
@@ -24,12 +34,14 @@ export function StallMenuCard({
         isHabis ? 'border-rose-200 opacity-80' : 'border-[#E5E7EB]'
       }`}
     >
-      <div className="relative aspect-video bg-[#F3F4F6]">
-        <Image
-          src={menu.foto || menu.image || '/images/menu/placeholder.jpg'}
+      <div className="relative aspect-video bg-[#F3F4F6] overflow-hidden">
+        <img
+          src={imgSrc}
           alt={menu.nama || menu.name}
-          fill
-          className={`object-cover ${isHabis ? 'grayscale' : ''}`}
+          className={`w-full h-full object-cover ${isHabis ? 'grayscale' : ''}`}
+          onError={(e) => {
+            e.currentTarget.src = MENU_IMAGE_FALLBACK;
+          }}
         />
         {isHabis && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -61,26 +73,31 @@ export function StallMenuCard({
         <div className="pt-2 border-t border-[#F3F4F6] flex items-center justify-between gap-2">
           <button
             onClick={() => onToggleHabis(menu)}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+            disabled={busyMenuId !== null}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors disabled:opacity-60 ${
               isHabis
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                 : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
             }`}
           >
+            {isBusy && <LoadingSpinner size="xs" variant={isHabis ? 'brand' : 'amber'} />}
             {isHabis ? 'Tandai Tersedia' : 'Tandai Habis'}
           </button>
 
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => onEdit(menu)}
-              className="px-2.5 py-1 rounded text-xs font-medium bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#374151]"
+              disabled={busyMenuId !== null}
+              className="px-2.5 py-1 rounded text-xs font-medium bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#374151] disabled:opacity-60"
             >
               Edit
             </button>
             <button
               onClick={() => onDelete(menu)}
-              className="px-2.5 py-1 rounded text-xs font-medium bg-rose-50 hover:bg-rose-100 text-rose-700"
+              disabled={busyMenuId !== null}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-rose-50 hover:bg-rose-100 text-rose-700 disabled:opacity-60"
             >
+              {isBusy && <LoadingSpinner size="xs" variant="danger" />}
               Hapus
             </button>
           </div>

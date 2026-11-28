@@ -4,9 +4,12 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Menu } from '@/models/menu';
 import { Stall } from '@/models/gerai';
+import { PengaturanKantin } from '@/models/pengaturan';
 import { TabItem } from '@/components/Tabs';
 import menuController from '@/controllers/menuController';
 import stallController from '@/controllers/stallController';
+import cartController from '@/controllers/cartController';
+import pengaturanController from '@/controllers/pengaturanController';
 import { useCart } from '@/context/CartContext';
 
 export function useCustomerMenu() {
@@ -16,6 +19,7 @@ export function useCustomerMenu() {
   // Data state loaded via controllers
   const [menus, setMenus] = useState<Menu[]>([]);
   const [stalls, setStalls] = useState<Stall[]>([]);
+  const [pengaturan, setPengaturan] = useState<PengaturanKantin>(pengaturanController.getDefault());
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Pure UI state for filtering & inputs
@@ -30,16 +34,18 @@ export function useCustomerMenu() {
   const cart = useCart();
   const { cardNumber, setCardNumber } = cart;
 
-  // Load menu and stall data on mount via controllers
+  // Load menu, stall, and settings data on mount
   useEffect(() => {
     async function loadData() {
       try {
-        const [stallData, menuData] = await Promise.all([
+        const [stallData, menuData, settingData] = await Promise.all([
           stallController.getStalls(),
           menuController.getMenus(),
+          pengaturanController.getPengaturan(),
         ]);
         setStalls(stallData);
         setMenus(menuData);
+        setPengaturan(settingData);
       } finally {
         setIsLoading(false);
       }
@@ -93,11 +99,18 @@ export function useCustomerMenu() {
     return stallController.getStallMap(stalls);
   }, [stalls]);
 
-  // Handle checkout navigation with validation
+  // Handle checkout navigation with validation matching backend card range
   const handleCheckout = useCallback(() => {
     if (cart.items.length === 0) return;
-    if (!cart.cardNumber || !cart.cardNumber.trim()) {
-      setCardError('Silakan masukkan nomor pelanggan terlebih dahulu.');
+
+    const validation = cartController.validateCardNumber(
+      cardNumber,
+      pengaturan.nomorKartuMin,
+      pengaturan.nomorKartuMax
+    );
+
+    if (!validation.valid) {
+      setCardError(validation.error || 'Silakan masukkan nomor kartu yang valid.');
       if (!isMobileCartOpen && typeof window !== 'undefined' && window.innerWidth < 1024) {
         setIsMobileCartOpen(true);
       }
@@ -107,14 +120,23 @@ export function useCustomerMenu() {
       }, 100);
       return;
     }
+
     setCardError(null);
     setIsMobileCartOpen(false);
-    router.push(`/customer/confirm?card=${encodeURIComponent(cart.cardNumber.trim())}`);
-  }, [cart.items.length, cart.cardNumber, isMobileCartOpen, router]);
+    router.push(`/customer/confirm?card=${encodeURIComponent(cardNumber.trim())}`);
+  }, [
+    cart.items.length,
+    cardNumber,
+    pengaturan.nomorKartuMin,
+    pengaturan.nomorKartuMax,
+    isMobileCartOpen,
+    router,
+  ]);
 
   return {
     menus,
     stalls,
+    pengaturan,
     isLoading,
     searchQuery,
     setSearchQuery,

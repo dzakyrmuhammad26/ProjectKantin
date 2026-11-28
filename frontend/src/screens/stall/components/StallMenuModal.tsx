@@ -1,4 +1,5 @@
 import React from 'react';
+import { LoadingSpinner } from '@/components/loading/LoadingSpinner';
 import { MenuImageUploadField } from '@/components/MenuImageUploadField';
 
 interface StallMenuModalProps {
@@ -42,7 +43,7 @@ export function StallMenuModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 flex flex-col gap-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 flex flex-col gap-4 max-h-[92vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
           <h3 className="text-base font-bold text-[#111827]">
             {modalMode === 'tambah' ? 'Tambah Menu Stan Baru' : 'Edit Menu Stan'}
@@ -63,7 +64,9 @@ export function StallMenuModal({
               value={formKode}
               onChange={(e) => onFormKodeChange(e.target.value)}
               required
-              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-xs"
+              minLength={2}
+              maxLength={20}
+              className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-xs uppercase"
             />
           </div>
 
@@ -74,6 +77,7 @@ export function StallMenuModal({
               value={formNama}
               onChange={(e) => onFormNamaChange(e.target.value)}
               required
+              minLength={2}
               placeholder="Contoh: Pempek Kulit Crispy"
               className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
@@ -86,8 +90,8 @@ export function StallMenuModal({
               value={formHarga}
               onChange={(e) => onFormHargaChange(parseInt(e.target.value, 10) || 0)}
               required
-              min={1000}
-              step={1000}
+              min={0}
+              step={100}
               className="w-full px-3 py-1.5 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
@@ -116,15 +120,17 @@ export function StallMenuModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-lg border border-[#D1D5DB] text-[#4B5563] hover:bg-[#F3F4F6]"
+              disabled={isSubmitting}
+              className="px-3.5 py-1.5 rounded-lg border border-[#D1D5DB] text-[#4B5563] hover:bg-[#F3F4F6] disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-60"
             >
+              {isSubmitting && <LoadingSpinner size="xs" variant="white" />}
               {isSubmitting ? 'Menyimpan...' : 'Simpan Menu'}
             </button>
           </div>

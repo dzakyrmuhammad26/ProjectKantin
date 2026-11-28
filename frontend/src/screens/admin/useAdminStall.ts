@@ -7,8 +7,9 @@ import { Gerai } from '@/models/gerai';
 export function useAdminStall() {
   const [geraiList, setGeraiList] = useState<Gerai[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [busyStallId, setBusyStallId] = useState<string | null>(null);
 
-  // Form Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGerai, setEditingGerai] = useState<Gerai | null>(null);
   const [kode, setKode] = useState('');
@@ -19,7 +20,7 @@ export function useAdminStall() {
 
   const loadGerai = useCallback(async () => {
     try {
-      const data = await adminKatalogController.getDaftarGerai();
+      const data = await adminKatalogController.getDaftarGerai(false);
       setGeraiList(data);
     } finally {
       setIsLoading(false);
@@ -32,7 +33,7 @@ export function useAdminStall() {
 
   const handleBukaTambah = () => {
     setEditingGerai(null);
-    setKode(`G0${geraiList.length + 1}`);
+    setKode(`G${String(geraiList.length + 1).padStart(2, '0')}`);
     setNama('');
     setPenyewa('');
     setWarna('#10B981');
@@ -50,15 +51,16 @@ export function useAdminStall() {
 
   const handleSimpan = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!kode.trim() || !nama.trim() || !penyewa.trim()) {
       alert('Kode, Nama Stan, dan Nama Penyewa wajib diisi');
       return;
     }
 
+    setIsSubmitting(true);
     try {
       if (editingGerai) {
         await adminKatalogController.ubahGerai(editingGerai.id, {
-          kode: kode.trim().toUpperCase(),
           nama: nama.trim(),
           penyewa: penyewa.trim(),
           warna,
@@ -79,12 +81,51 @@ export function useAdminStall() {
       setTimeout(() => setFeedback(null), 3000);
     } catch (err: any) {
       alert(err.message || 'Gagal menyimpan data gerai');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleAktif = async (g: Gerai) => {
+    if (busyStallId) return;
+    setBusyStallId(g.id);
+    try {
+      await adminKatalogController.ubahGerai(g.id, { aktif: !g.aktif });
+      setFeedback(`Stan "${g.nama}" berhasil ${g.aktif ? 'dinonaktifkan' : 'diaktifkan kembali'}.`);
+      await loadGerai();
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengubah status stan');
+    } finally {
+      setBusyStallId(null);
+    }
+  };
+
+  const handleHapusGerai = async (g: Gerai) => {
+    if (busyStallId) return;
+    const confirmed = window.confirm(
+      `Hapus permanen stan "${g.nama}" (${g.kode})?`
+    );
+    if (!confirmed) return;
+
+    setBusyStallId(g.id);
+    try {
+      await adminKatalogController.hapusGerai(g.id, true);
+      setFeedback(`Stan "${g.nama}" berhasil dihapus.`);
+      await loadGerai();
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus stan');
+    } finally {
+      setBusyStallId(null);
     }
   };
 
   return {
     geraiList,
     isLoading,
+    isSubmitting,
+    busyStallId,
     isModalOpen,
     setIsModalOpen,
     editingGerai,
@@ -100,5 +141,7 @@ export function useAdminStall() {
     handleBukaTambah,
     handleBukaEdit,
     handleSimpan,
+    handleToggleAktif,
+    handleHapusGerai,
   };
 }

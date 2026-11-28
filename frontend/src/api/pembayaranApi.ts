@@ -1,5 +1,5 @@
 import { DetailPembayaran } from '@/models/pembayaran';
-import { Pesanan, StatusPesanan } from '@/models/pesanan';
+import { Pesanan } from '@/models/pesanan';
 import { apiRequest } from './httpClient';
 import { mapPembayaran, mapPesanan } from './mappers';
 import { pesananApi } from './pesananApi';
@@ -70,36 +70,5 @@ export const pembayaranApi = {
   async dapatkanSemuaPembayaran(): Promise<DetailPembayaran[]> {
     const list = await apiRequest<any[]>('/pembayaran');
     return list.map(mapPembayaran);
-  },
-};
-
-// Wrapper kompatibilitas cashierApi
-export const cashierApi = {
-  async getAllOrders(): Promise<Pesanan[]> {
-    return pesananApi.dapatkanSemua();
-  },
-
-  async getOrderById(orderId: string): Promise<Pesanan | null> {
-    return pesananApi.dapatkanBerdasarkanId(orderId);
-  },
-
-  async processPayment(orderId: string, payment: DetailPembayaran): Promise<Pesanan> {
-    return pembayaranApi.prosesPembayaran(orderId, payment);
-  },
-
-  async cancelOrder(orderId: string): Promise<Pesanan> {
-    return pesananApi.batalkanPesanan(orderId);
-  },
-
-  async updateOrderItems(
-    orderId: string,
-    items: Pesanan['items'],
-    total: number
-  ): Promise<Pesanan> {
-    return pesananApi.perbaruiItem(orderId, items, total);
-  },
-
-  async updateStatus(orderId: string, status: StatusPesanan): Promise<Pesanan> {
-    return pesananApi.perbaruiStatus(orderId, status);
   },
 };

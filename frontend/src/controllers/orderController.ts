@@ -1,34 +1,69 @@
 import { pesananApi } from '@/api/pesananApi';
-import { CartItem, Order, Pesanan } from '@/models/pesanan';
+import { sesiApi } from '@/api/sesiApi';
+import { CartItem, Order, Pesanan, SumberPesanan } from '@/models/pesanan';
 import cartController from './cartController';
+
+export interface CreateOrderOptions {
+  nomorMeja?: number;
+  idGerai?: string;
+  namaGerai?: string;
+  sumber?: SumberPesanan;
+  catatan?: string;
+  minCard?: number;
+  maxCard?: number;
+}
 
 class OrderController {
   async createOrder(
     cardNumber: string,
     items: CartItem[],
     totalAmount: number,
-    nomorMeja?: number
+    options?: CreateOrderOptions
   ): Promise<Order> {
     if (items.length === 0) {
       throw new Error('Keranjang belanja kosong');
     }
 
-    const val = cartController.validateCardNumber(cardNumber);
+    const val = cartController.validateCardNumber(
+      cardNumber,
+      options?.minCard ?? 1,
+      options?.maxCard ?? 99
+    );
     if (!val.valid) {
       throw new Error(val.error || 'Nomor kartu fisik tidak valid');
     }
 
+    const cleanCard = cardNumber.trim();
+    const numericCard = parseInt(cleanCard, 10);
+
+    // Buka atau gunakan sesi kartu aktif dari backend /api/sesi/buka
+    let idSesi: string | undefined;
+    try {
+      const sesi = await sesiApi.bukaSesi(numericCard, options?.nomorMeja);
+      idSesi = sesi.id;
+    } catch {
+      // Tetap lanjutkan buat pesanan apabila endpoint sesi tidak tersedia
+    }
+
     return await pesananApi.buatPesanan({
-      nomorKartu: cardNumber.trim(),
+      nomorKartu: cleanCard,
       items: [...items],
       total: totalAmount,
-      nomorMeja,
-      sumber: 'pelanggan',
+      nomorMeja: options?.nomorMeja,
+      idGerai: options?.idGerai,
+      namaGerai: options?.namaGerai,
+      idSesi,
+      catatan: options?.catatan,
+      sumber: options?.sumber || 'pelanggan',
     });
   }
 
   async getLastOrder(): Promise<Order | null> {
     return await pesananApi.dapatkanPesananTerakhir();
+  }
+
+  async getOrderById(id: string): Promise<Order | null> {
+    return await pesananApi.dapatkanBerdasarkanId(id);
   }
 
   async getOrdersByCard(cardNumber: string): Promise<Pesanan[]> {
