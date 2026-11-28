@@ -1,23 +1,29 @@
-import mongoose from 'mongoose'
 import SesiModel from '../models/sesi.model.js'
 import { bukaSesiSchema, updateStatusSesiSchema } from '../schemas/sesiSchema.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
-const findSesiFilter = (idOrCode) => {
-  if (mongoose.Types.ObjectId.isValid(idOrCode)) {
-    return { _id: idOrCode }
+const findSesiByIdOrCode = async (idOrCode) => {
+  if (/^\d+$/.test(String(idOrCode))) {
+    const id = Number(idOrCode)
+    if (Number.isSafeInteger(id) && id > 0) {
+      return await SesiModel.findUnique({ where: { id } })
+    }
   }
-  return { idSesi: idOrCode }
+  return await SesiModel.findUnique({ where: { idSesi: String(idOrCode) } })
 }
 
 class SesiController {
   static async index(req, res, next) {
     try {
-      const filter = {}
-      if (req.query.status) filter.status = req.query.status
-      if (req.query.nomorKartu) filter.nomorKartu = Number(req.query.nomorKartu)
+      const where = {}
+      if (req.query.status) where.status = req.query.status
+      if (req.query.nomorKartu) where.nomorKartu = Number(req.query.nomorKartu)
 
-      const listSesi = await SesiModel.find(filter).sort({ waktuBuka: -1 })
+      const listSesi = await SesiModel.findMany({
+        where,
+        orderBy: { waktuBuka: 'desc' },
+      })
+
       return apiResponse({
         res,
         status: 200,
@@ -32,7 +38,17 @@ class SesiController {
   static async aktifByKartu(req, res, next) {
     try {
       const nomorKartu = Number(req.params.nomorKartu)
-      const sesi = await SesiModel.findOne({ nomorKartu, status: 'aktif' })
+      if (!Number.isInteger(nomorKartu)) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: `Tidak ada sesi aktif untuk kartu nomor ${req.params.nomorKartu}`,
+        })
+      }
+
+      const sesi = await SesiModel.findFirst({
+        where: { nomorKartu, status: 'aktif' },
+      })
 
       if (!sesi) {
         return apiResponse({
@@ -55,7 +71,7 @@ class SesiController {
 
   static async show(req, res, next) {
     try {
-      const sesi = await SesiModel.findOne(findSesiFilter(req.params.id))
+      const sesi = await findSesiByIdOrCode(req.params.id)
       if (!sesi) {
         return apiResponse({
           res,
@@ -84,8 +100,10 @@ class SesiController {
     try {
       const { nomorKartu, nomorMeja } = result.data
 
-      // Cek apakah sudah ada sesi aktif untuk kartu ini
-      const existing = await SesiModel.findOne({ nomorKartu, status: 'aktif' })
+      const existing = await SesiModel.findFirst({
+        where: { nomorKartu, status: 'aktif' },
+      })
+
       if (existing) {
         return apiResponse({
           res,
@@ -100,12 +118,14 @@ class SesiController {
       const idSesi = `SESI-${todayStr}-${String(nomorKartu).padStart(2, '0')}${randomSuffix}`
 
       const newSesi = await SesiModel.create({
-        idSesi,
-        nomorKartu,
-        nomorMeja: nomorMeja ?? null,
-        status: 'aktif',
-        totalTagihan: 0,
-        waktuBuka: new Date(),
+        data: {
+          idSesi,
+          nomorKartu,
+          nomorMeja: nomorMeja ?? null,
+          status: 'aktif',
+          totalTagihan: 0,
+          waktuBuka: new Date(),
+        },
       })
 
       return apiResponse({
@@ -121,19 +141,19 @@ class SesiController {
 
   static async tutup(req, res, next) {
     try {
-      const updated = await SesiModel.findOneAndUpdate(
-        findSesiFilter(req.params.id),
-        { status: 'lunas', waktuTutup: new Date() },
-        { returnDocument: 'after' },
-      )
-
-      if (!updated) {
+      const existing = await findSesiByIdOrCode(req.params.id)
+      if (!existing) {
         return apiResponse({
           res,
           status: 404,
           message: 'Sesi tidak ditemukan',
         })
       }
+
+      const updated = await SesiModel.update({
+        where: { id: existing.id },
+        data: { status: 'lunas', waktuTutup: new Date() },
+      })
 
       return apiResponse({
         res,
@@ -153,24 +173,24 @@ class SesiController {
     }
 
     try {
-      const updates = { ...result.data }
-      if (updates.status && updates.status !== 'aktif') {
-        updates.waktuTutup = new Date()
-      }
-
-      const updated = await SesiModel.findOneAndUpdate(
-        findSesiFilter(req.params.id),
-        updates,
-        { returnDocument: 'after' },
-      )
-
-      if (!updated) {
+      const existing = await findSesiByIdOrCode(req.params.id)
+      if (!existing) {
         return apiResponse({
           res,
           status: 404,
           message: 'Sesi tidak ditemukan',
         })
       }
+
+      const updates = { ...result.data }
+      if (updates.status && updates.status !== 'aktif') {
+        updates.waktuTutup = new Date()
+      }
+
+      const updated = await SesiModel.update({
+        where: { id: existing.id },
+        data: updates,
+      })
 
       return apiResponse({
         res,

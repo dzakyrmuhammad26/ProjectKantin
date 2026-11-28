@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import multer from 'multer'
 import z, { ZodError } from 'zod'
 import { UPLOAD_MAX_SIZE_MB } from '../config/env.js'
@@ -22,22 +23,19 @@ export const errorHandler = (err, req, res, next) => {
     } else {
       message = err.message
     }
-  } else if (err.name === 'CastError') {
-    statusCode = 400
-    message = `Format ID tidak valid untuk ${err.path}: ${err.value}`
-  } else if (err.code === 11000) {
-    statusCode = 409
-    const fields = err.keyValue ? Object.keys(err.keyValue) : []
-    const fieldName = fields.join(', ') || 'field'
-    message = `Duplikasi data pada ${fieldName}`
-    errors = err.keyValue
-      ? Object.fromEntries(
-          Object.entries(err.keyValue).map(([field, value]) => [
-            field,
-            [`${field} '${value}' sudah terdaftar`],
-          ]),
-        )
-      : null
+  } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') {
+      statusCode = 409
+      const target = err.meta?.target
+      const fieldName = Array.isArray(target) ? target.join(', ') : String(target || 'field')
+      message = `Duplikasi data pada ${fieldName}`
+    } else if (err.code === 'P2025') {
+      statusCode = 404
+      message = 'Data tidak ditemukan'
+    } else if (err.code === 'P2003') {
+      statusCode = 400
+      message = 'Relasi data tidak valid'
+    }
   } else if (err.type === 'entity.parse.failed') {
     statusCode = 400
     message = 'Format JSON tidak valid'

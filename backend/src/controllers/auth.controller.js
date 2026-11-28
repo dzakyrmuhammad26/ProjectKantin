@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'
+import crypto from 'crypto'
 import UserModel from '../models/user.model.js'
 import { loginPinSchema } from '../schemas/penggunaSchema.js'
 import { PasswordHelper } from '../utils/bcrypt.js'
@@ -15,12 +15,12 @@ class AuthController {
     const { username, pin } = result.data
 
     try {
-      const query = { aktif: true }
+      const where = { aktif: true }
       if (username) {
-        query.username = username.toLowerCase()
+        where.username = username.toLowerCase()
       }
 
-      const candidates = await UserModel.find(query).select('+pin')
+      const candidates = await UserModel.findMany({ where })
 
       let matchedUser = null
       for (const user of candidates) {
@@ -44,7 +44,7 @@ class AuthController {
       }
 
       const accessToken = await generateToken({
-        sub: matchedUser._id.toString(),
+        sub: String(matchedUser.id),
         peran: matchedUser.peran,
         idGerai: matchedUser.idGerai,
       })
@@ -55,8 +55,7 @@ class AuthController {
         message: 'Login berhasil',
         data: {
           user: {
-            _id: matchedUser._id,
-            id: matchedUser._id,
+            id: matchedUser.id,
             nama: matchedUser.nama,
             username: matchedUser.username,
             peran: matchedUser.peran,
@@ -74,7 +73,7 @@ class AuthController {
 
   static async guest(req, res, next) {
     try {
-      const guestId = new mongoose.Types.ObjectId().toString()
+      const guestId = crypto.randomUUID()
       const accessToken = await generateToken({
         sub: guestId,
         peran: 'pelanggan',
@@ -98,7 +97,29 @@ class AuthController {
 
   static async me(req, res, next) {
     try {
-      const user = await UserModel.findById(req.user.id)
+      const userId = Number(req.user.id)
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: 'Pengguna tidak ditemukan',
+        })
+      }
+
+      const user = await UserModel.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          nama: true,
+          username: true,
+          peran: true,
+          idGerai: true,
+          aktif: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+
       if (!user) {
         return apiResponse({
           res,

@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum PeranPengguna {
+  superadmin
+  kasir
+  gerai
+  pelanggan
+}
+
+enum KategoriMenu {
+  makanan
+  minuman
+  camilan
+}
+
+enum StatusSesi {
+  aktif
+  lunas
+  batal
+  tidak_dibayar
+}
+
+enum StatusPesanan {
+  menunggu_bayar
+  siap_dibuat
+  selesai
+  batal
+}
+
+enum SumberPesanan {
+  pelanggan
+  gerai
+  kasir
+}
+
+enum MetodePembayaran {
+  tunai
+  qris
+  debit
+  cash
+}
+
+model User {
+  id        Int           @id @default(autoincrement())
+  nama      String        @db.VarChar(100)
+  username  String        @unique @db.VarChar(50)
+  pin       String        @db.VarChar(255)
+  peran     PeranPengguna @default(gerai)
+  idGerai   String?       @db.VarChar(10)
+  aktif     Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  gerai              Gerai?       @relation(fields: [idGerai], references: [kode], onUpdate: Cascade, onDelete: SetNull)
+  transaksiKasirList Pembayaran[]
+
+  @@index([idGerai])
+  @@map("users")
+}
+
+model Gerai {
+  id        Int      @id @default(autoincrement())
+  kode      String   @unique @db.VarChar(10)
+  nama      String   @db.VarChar(100)
+  penyewa   String   @db.VarChar(100)
+  warna     String   @default("#F97316") @db.VarChar(20)
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  menus       Menu[]
+  users       User[]
+  pesanan     Pesanan[]
+  itemPesanan ItemPesanan[]
+
+  @@map("gerai")
+}
+
+model Menu {
+  id        Int          @id @default(autoincrement())
+  kode      String       @unique @db.VarChar(20)
+  nama      String       @db.VarChar(100)
+  harga     Int
+  idGerai   String       @db.VarChar(10)
+  namaGerai String       @db.VarChar(100)
+  kategori  KategoriMenu @default(makanan)
+  foto      String       @default("/images/menu/placeholder.jpg") @db.VarChar(500)
+  urutan    Int          @default(99)
+  isFavorit Boolean      @default(false)
+  isHabis   Boolean      @default(false)
+  aktif     Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  gerai       Gerai         @relation(fields: [idGerai], references: [kode], onUpdate: Cascade, onDelete: Restrict)
+  itemPesanan ItemPesanan[]
+
+  @@index([idGerai])
+  @@map("menus")
+}
+
+model Sesi {
+  id           Int        @id @default(autoincrement())
+  idSesi       String     @unique @db.VarChar(50)
+  nomorKartu   Int
+  nomorMeja    Int?
+  status       StatusSesi @default(aktif)
+  totalTagihan Int        @default(0)
+  waktuBuka    DateTime   @default(now())
+  waktuTutup   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  pesanan    Pesanan[]
+  pembayaran Pembayaran[]
+
+  @@index([nomorKartu, status])
+  @@map("sesi")
+}
+
+model Pesanan {
+  id           Int           @id @default(autoincrement())
+  idPesanan    String        @unique @db.VarChar(50)
+  idSesi       String?       @db.VarChar(50)
+  nomorKartu   String        @db.VarChar(10)
+  nomorMeja    Int?
+  idGerai      String?       @db.VarChar(10)
+  namaGerai    String?       @db.VarChar(100)
+  pembayaranId Int?
+  status       StatusPesanan @default(menunggu_bayar)
+  sumber       SumberPesanan @default(pelanggan)
+  total        Int           @default(0)
+  catatan      String        @default("") @db.VarChar(255)
+  waktuPesan   DateTime      @default(now())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  sesi       Sesi?         @relation(fields: [idSesi], references: [idSesi], onUpdate: Cascade, onDelete: SetNull)
+  gerai      Gerai?        @relation(fields: [idGerai], references: [kode], onUpdate: Cascade, onDelete: SetNull)
+  pembayaran Pembayaran?   @relation(fields: [pembayaranId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+  items      ItemPesanan[]
+
+  @@index([nomorKartu])
+  @@index([idSesi])
+  @@index([idGerai])
+  @@index([pembayaranId])
+  @@index([status])
+  @@map("pesanan")
+}
+
+model ItemPesanan {
+  id           Int     @id @default(autoincrement())
+  pesananId    Int
+  menuId       Int?
+  idMenu       String  @db.VarChar(50)
+  namaMenu     String  @db.VarChar(100)
+  idGerai      String? @db.VarChar(10)
+  namaGerai    String? @db.VarChar(100)
+  hargaSaatItu Int
+  jumlah       Int
+  subtotal     Int
+  catatan      String  @default("") @db.VarChar(255)
+
+  pesanan Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  menu    Menu?   @relation(fields: [menuId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+  gerai   Gerai?  @relation(fields: [idGerai], references: [kode], onUpdate: Cascade, onDelete: SetNull)
+
+  @@index([pesananId])
+  @@index([menuId])
+  @@index([idGerai])
+  @@map("item_pesanan")
+}
+
+model Pembayaran {
+  id            Int              @id @default(autoincrement())
+  idPesanan     String           @db.VarChar(255)
+  idSesi        String?          @db.VarChar(50)
+  kasirId       Int?
+  idKasir       String?          @db.VarChar(50)
+  metode        MetodePembayaran @default(tunai)
+  totalTagihan  Int
+  uangDiterima  Int
+  kembalian     Int              @default(0)
+  referensiQris String?          @db.VarChar(100)
+  waktuBayar    DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  sesi    Sesi?     @relation(fields: [idSesi], references: [idSesi], onUpdate: Cascade, onDelete: SetNull)
+  kasir   User?     @relation(fields: [kasirId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+  pesanan Pesanan[]
+
+  @@index([idSesi])
+  @@index([kasirId])
+  @@map("pembayaran")
+}
+
+model Pengaturan {
+  id               Int      @id @default(autoincrement())
+  namaKantin       String   @default("Kantin Sentral Pujasera") @db.VarChar(100)
+  alamatKantin     String   @default("Gedung Kuliah Bersama Lt. 1") @db.VarChar(255)
+  nomorKartuMin    Int      @default(1)
+  nomorKartuMax    Int      @default(99)
+  teksFooterStruk  String   @default("Terima kasih atas kunjungan Anda di Kantin Sentral!") @db.VarChar(255)
+  metodeBayarAktif Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("pengaturan")
+}

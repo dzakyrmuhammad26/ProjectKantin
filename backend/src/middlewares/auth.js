@@ -32,7 +32,7 @@ export const authenticateJwt = async (req, res, next) => {
     typeof decoded !== 'object' ||
     decoded === null ||
     typeof decoded.sub !== 'string' ||
-    !/^[a-f\d]{24}$/i.test(decoded.sub)
+    decoded.sub.trim() === ''
   ) {
     return apiResponse({ res, status: 401, message: 'Token tidak valid' })
   }

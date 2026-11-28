@@ -1,24 +1,31 @@
-import mongoose from 'mongoose'
+import { prisma } from '../config/database.js'
 import PembayaranModel from '../models/pembayaran.model.js'
-import PesananModel from '../models/pesanan.model.js'
 import { prosesPembayaranSchema } from '../schemas/pembayaranSchema.js'
+import { AppError } from '../utils/appError.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
-const buildOrderFilter = (idOrCode) => {
-  if (mongoose.Types.ObjectId.isValid(idOrCode)) {
-    return { _id: idOrCode }
+const buildOrderWhere = (idOrCode) => {
+  if (/^\d+$/.test(String(idOrCode))) {
+    const id = Number(idOrCode)
+    if (Number.isSafeInteger(id) && id > 0) {
+      return { id }
+    }
   }
-  return { idPesanan: idOrCode }
+  return { idPesanan: String(idOrCode) }
 }
 
 class PembayaranController {
   static async index(req, res, next) {
     try {
-      const filter = {}
-      if (req.query.idKasir) filter.idKasir = req.query.idKasir
-      if (req.query.metode) filter.metode = req.query.metode
+      const where = {}
+      if (req.query.idKasir) where.idKasir = String(req.query.idKasir)
+      if (req.query.metode) where.metode = req.query.metode
 
-      const listPembayaran = await PembayaranModel.find(filter).sort({ waktuBayar: -1 })
+      const listPembayaran = await PembayaranModel.findMany({
+        where,
+        orderBy: { waktuBayar: 'desc' },
+      })
+
       return apiResponse({
         res,
         status: 200,
@@ -32,7 +39,16 @@ class PembayaranController {
 
   static async show(req, res, next) {
     try {
-      const pembayaran = await PembayaranModel.findById(req.params.id)
+      if (!/^\d+$/.test(String(req.params.id))) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: 'Data pembayaran tidak ditemukan',
+        })
+      }
+
+      const id = Number(req.params.id)
+      const pembayaran = await PembayaranModel.findUnique({ where: { id } })
       if (!pembayaran) {
         return apiResponse({
           res,
@@ -74,40 +90,69 @@ class PembayaranController {
       const isCash = metode === 'tunai' || metode === 'cash'
       const kembalian = isCash ? Math.max(0, uangDiterima - totalTagihan) : 0
       const waktuBayar = new Date()
-      const kasirId = idKasir || req.user?.id || null
+      const rawKasirId = idKasir || req.user?.id || null
 
-      const paymentSummary = {
-        metode,
-        totalTagihan,
-        uangDiterima,
-        kembalian,
-        referensiQris: referensiQris || null,
-        idKasir: kasirId,
-        waktuBayar,
-      }
+      const { pembayaran, updatedOrders } = await prisma.$transaction(async (tx) => {
+        const targetOrders = []
 
-      const updatedOrders = []
-
-      for (const targetId of targetIds) {
-        const order = await PesananModel.findOne(buildOrderFilter(targetId))
-        if (!order) {
-          return apiResponse({
-            res,
-            status: 404,
-            message: `Pesanan dengan ID ${targetId} tidak ditemukan`,
+        for (const targetId of targetIds) {
+          const order = await tx.pesanan.findUnique({
+            where: buildOrderWhere(targetId),
           })
+
+          if (!order) {
+            throw new AppError(`Pesanan dengan ID ${targetId} tidak ditemukan`, 404)
+          }
+
+          targetOrders.push(order)
         }
 
-        order.status = 'siap_dibuat'
-        order.pembayaran = paymentSummary
-        await order.save()
-        updatedOrders.push(order)
-      }
+        const resolvedIdSesi = idSesi || targetOrders[0]?.idSesi || null
+        if (resolvedIdSesi) {
+          const sesiExists = await tx.sesi.findUnique({ where: { idSesi: resolvedIdSesi } })
+          if (!sesiExists) {
+            throw new AppError(`Sesi '${resolvedIdSesi}' tidak ditemukan`, 404)
+          }
+        }
 
-      const pembayaran = await PembayaranModel.create({
-        idPesanan: targetIds.join(','),
-        idSesi: idSesi || updatedOrders[0]?.idSesi || null,
-        ...paymentSummary,
+        let resolvedKasirId = null
+        if (rawKasirId && /^\d+$/.test(String(rawKasirId))) {
+          const parsedKasirId = Number(rawKasirId)
+          if (Number.isSafeInteger(parsedKasirId) && parsedKasirId > 0) {
+            const kasirUser = await tx.user.findUnique({ where: { id: parsedKasirId } })
+            if (kasirUser) resolvedKasirId = kasirUser.id
+          }
+        }
+
+        const createdPayment = await tx.pembayaran.create({
+          data: {
+            idPesanan: targetIds.join(','),
+            idSesi: resolvedIdSesi,
+            kasirId: resolvedKasirId,
+            idKasir: resolvedKasirId ? String(resolvedKasirId) : rawKasirId ? String(rawKasirId) : null,
+            metode,
+            totalTagihan,
+            uangDiterima,
+            kembalian,
+            referensiQris: referensiQris || null,
+            waktuBayar,
+          },
+        })
+
+        const orders = []
+        for (const order of targetOrders) {
+          const updated = await tx.pesanan.update({
+            where: { id: order.id },
+            data: {
+              status: 'siap_dibuat',
+              pembayaranId: createdPayment.id,
+            },
+            include: { items: true, pembayaran: true },
+          })
+          orders.push(updated)
+        }
+
+        return { pembayaran: createdPayment, updatedOrders: orders }
       })
 
       return apiResponse({

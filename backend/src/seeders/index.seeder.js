@@ -1,5 +1,4 @@
-import mongoose from 'mongoose'
-import connectDB from '../config/database.js'
+import { connectDB, prisma } from '../config/database.js'
 import {
   INITIAL_GERAI,
   INITIAL_MENU,
@@ -18,44 +17,46 @@ const seedDatabase = async () => {
 
     console.log('🌱 Seeding Gerai...')
     for (const gerai of INITIAL_GERAI) {
-      await GeraiModel.findOneAndUpdate(
-        { kode: gerai.kode },
-        gerai,
-        { upsert: true, returnDocument: 'after' },
-      )
+      await GeraiModel.upsert({
+        where: { kode: gerai.kode },
+        update: gerai,
+        create: gerai,
+      })
     }
 
     console.log('🌱 Seeding Pengguna...')
     for (const user of INITIAL_PENGGUNA) {
       const hashedPin = await PasswordHelper.hash(user.pin)
-      await UserModel.findOneAndUpdate(
-        { username: user.username },
-        { ...user, pin: hashedPin },
-        { upsert: true, returnDocument: 'after' },
-      )
+      await UserModel.upsert({
+        where: { username: user.username },
+        update: { ...user, pin: hashedPin },
+        create: { ...user, pin: hashedPin },
+      })
     }
 
     console.log('🌱 Seeding Menu...')
     for (const menu of INITIAL_MENU) {
-      await MenuModel.findOneAndUpdate(
-        { kode: menu.kode },
-        menu,
-        { upsert: true, returnDocument: 'after' },
-      )
+      await MenuModel.upsert({
+        where: { kode: menu.kode },
+        update: menu,
+        create: menu,
+      })
     }
 
     console.log('🌱 Seeding Pengaturan...')
-    const existingPengaturan = await PengaturanModel.findOne()
+    const existingPengaturan = await PengaturanModel.findFirst()
     if (!existingPengaturan) {
-      await PengaturanModel.create(INITIAL_PENGATURAN)
+      await PengaturanModel.create({
+        data: INITIAL_PENGATURAN,
+      })
     }
 
-    console.log('✅ Seeding database Kantin selesai!')
+    console.log('✅ Seeding database MySQL Kantin selesai!')
   } catch (error) {
     console.error('❌ Gagal menjalankan seeder:', error)
     process.exit(1)
   } finally {
-    await mongoose.disconnect()
+    await prisma.$disconnect()
   }
 }
 

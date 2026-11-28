@@ -1,24 +1,30 @@
-import mongoose from 'mongoose'
 import GeraiModel from '../models/gerai.model.js'
 import { createGeraiSchema, updateGeraiSchema } from '../schemas/geraiSchema.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
-const findGeraiFilter = (idOrKode) => {
-  if (mongoose.Types.ObjectId.isValid(idOrKode)) {
-    return { _id: idOrKode }
+const findGeraiByIdOrKode = async (idOrKode) => {
+  if (/^\d+$/.test(String(idOrKode))) {
+    const id = Number(idOrKode)
+    if (Number.isSafeInteger(id) && id > 0) {
+      return await GeraiModel.findUnique({ where: { id } })
+    }
   }
-  return { kode: idOrKode.toUpperCase() }
+  return await GeraiModel.findUnique({ where: { kode: String(idOrKode).toUpperCase() } })
 }
 
 class GeraiController {
   static async index(req, res, next) {
     try {
-      const filter = {}
+      const where = {}
       if (req.query.aktif !== undefined) {
-        filter.aktif = req.query.aktif === 'true'
+        where.aktif = req.query.aktif === 'true'
       }
 
-      const listGerai = await GeraiModel.find(filter).sort({ kode: 1 })
+      const listGerai = await GeraiModel.findMany({
+        where,
+        orderBy: { kode: 'asc' },
+      })
+
       return apiResponse({
         res,
         status: 200,
@@ -32,7 +38,7 @@ class GeraiController {
 
   static async show(req, res, next) {
     try {
-      const gerai = await GeraiModel.findOne(findGeraiFilter(req.params.id))
+      const gerai = await findGeraiByIdOrKode(req.params.id)
       if (!gerai) {
         return apiResponse({
           res,
@@ -59,7 +65,9 @@ class GeraiController {
     }
 
     try {
-      const newGerai = await GeraiModel.create(result.data)
+      const newGerai = await GeraiModel.create({
+        data: result.data,
+      })
       return apiResponse({
         res,
         status: 201,
@@ -78,19 +86,19 @@ class GeraiController {
     }
 
     try {
-      const updated = await GeraiModel.findOneAndUpdate(
-        findGeraiFilter(req.params.id),
-        result.data,
-        { returnDocument: 'after', runValidators: true },
-      )
-
-      if (!updated) {
+      const existing = await findGeraiByIdOrKode(req.params.id)
+      if (!existing) {
         return apiResponse({
           res,
           status: 404,
           message: 'Gerai tidak ditemukan',
         })
       }
+
+      const updated = await GeraiModel.update({
+        where: { id: existing.id },
+        data: result.data,
+      })
 
       return apiResponse({
         res,
@@ -105,16 +113,17 @@ class GeraiController {
 
   static async delete(req, res, next) {
     try {
-      const filter = findGeraiFilter(req.params.id)
+      const existing = await findGeraiByIdOrKode(req.params.id)
+      if (!existing) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: 'Gerai tidak ditemukan',
+        })
+      }
+
       if (req.query.permanent === 'true') {
-        const deleted = await GeraiModel.findOneAndDelete(filter)
-        if (!deleted) {
-          return apiResponse({
-            res,
-            status: 404,
-            message: 'Gerai tidak ditemukan',
-          })
-        }
+        await GeraiModel.delete({ where: { id: existing.id } })
         return apiResponse({
           res,
           status: 200,
@@ -122,19 +131,10 @@ class GeraiController {
         })
       }
 
-      const deactivated = await GeraiModel.findOneAndUpdate(
-        filter,
-        { aktif: false },
-        { returnDocument: 'after' },
-      )
-
-      if (!deactivated) {
-        return apiResponse({
-          res,
-          status: 404,
-          message: 'Gerai tidak ditemukan',
-        })
-      }
+      const deactivated = await GeraiModel.update({
+        where: { id: existing.id },
+        data: { aktif: false },
+      })
 
       return apiResponse({
         res,

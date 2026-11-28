@@ -90,7 +90,7 @@
                   "    pm.expect(json.data.token_type).to.eql('Bearer');",
                   "    pm.expect(json.data.user.peran).to.eql('superadmin');",
                   "    pm.environment.set('superadminToken', json.data.access_token);",
-                  "    pm.environment.set('superadminId', json.data.user._id);",
+                  "    pm.environment.set('superadminId', json.data.user.id);",
                   "});"
                 ]
               }
@@ -125,7 +125,7 @@
                   "    const json = pm.response.json();",
                   "    pm.expect(json.data.user.peran).to.eql('kasir');",
                   "    pm.environment.set('kasirToken', json.data.access_token);",
-                  "    pm.environment.set('kasirId', json.data.user._id);",
+                  "    pm.environment.set('kasirId', json.data.user.id);",
                   "});"
                 ]
               }
@@ -545,9 +545,9 @@
                   "});",
                   "pm.test('User created without exposing PIN', function () {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.data).to.have.property('_id');",
+                  "    pm.expect(json.data).to.have.property('id');",
                   "    pm.expect(json.data).to.not.have.property('pin');",
-                  "    pm.environment.set('createdUserId', json.data._id);",
+                  "    pm.environment.set('createdUserId', json.data.id);",
                   "});"
                 ]
               }
@@ -583,7 +583,7 @@
                   "});",
                   "pm.test('User ID matches', function () {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.data._id).to.eql(pm.environment.get('createdUserId'));",
+                  "    pm.expect(json.data.id).to.eql(pm.environment.get('createdUserId'));",
                   "});"
                 ]
               }
@@ -992,8 +992,8 @@
                   "});",
                   "pm.test('Gerai created and ID saved', function () {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.data).to.have.property('_id');",
-                  "    pm.environment.set('createdGeraiId', json.data._id);",
+                  "    pm.expect(json.data).to.have.property('id');",
+                  "    pm.environment.set('createdGeraiId', json.data.id);",
                   "});"
                 ]
               }
@@ -1387,7 +1387,7 @@
                   "pm.test('namaGerai auto-filled from GeraiModel', function () {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.data.namaGerai).to.eql('Pempek Cik Ani');",
-                  "    pm.environment.set('createdMenuId', json.data._id);",
+                  "    pm.environment.set('createdMenuId', json.data.id);",
                   "});"
                 ]
               }
@@ -1671,7 +1671,7 @@
                   "    const json = pm.response.json();",
                   "    pm.expect(json.data.status).to.eql('aktif');",
                   "    pm.environment.set('createdSesiId', json.data.idSesi);",
-                  "    pm.environment.set('createdSesiObjId', json.data._id);",
+                  "    pm.environment.set('createdSesiObjId', json.data.id);",
                   "});"
                 ]
               }
@@ -2001,7 +2001,7 @@
                   "    pm.expect(json.data.status).to.eql('menunggu_bayar');",
                   "    pm.expect(json.data.total).to.eql(50000);",
                   "    pm.environment.set('createdPesananId', json.data.idPesanan);",
-                  "    pm.environment.set('createdPesananObjId', json.data._id);",
+                  "    pm.environment.set('createdPesananObjId', json.data.id);",
                   "    pm.environment.set('createdPesananTotal', json.data.total);",
                   "});"
                 ]
@@ -2480,7 +2480,7 @@
                   "    const json = pm.response.json();",
                   "    pm.expect(json.data.pembayaran.kembalian).to.eql(19000);",
                   "    pm.expect(json.data.pesanan.status).to.eql('siap_dibuat');",
-                  "    pm.environment.set('createdPembayaranId', json.data.pembayaran._id);",
+                  "    pm.environment.set('createdPembayaranId', json.data.pembayaran.id);",
                   "});"
                 ]
               }
@@ -2584,7 +2584,7 @@
                   "});",
                   "pm.test('Contains created payment record', function () {",
                   "    const json = pm.response.json();",
-                  "    const found = json.data.find(p => p._id === pm.environment.get('createdPembayaranId'));",
+                  "    const found = json.data.find(p => p.id === pm.environment.get('createdPembayaranId'));",
                   "    pm.expect(found).to.not.be.undefined;",
                   "});"
                 ]
@@ -2615,7 +2615,7 @@
                   "});",
                   "pm.test('Payment ID matches', function () {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.data._id).to.eql(pm.environment.get('createdPembayaranId'));",
+                  "    pm.expect(json.data.id).to.eql(pm.environment.get('createdPembayaranId'));",
                   "});"
                 ]
               }

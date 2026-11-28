@@ -5,9 +5,15 @@ import { apiResponse } from '../utils/response.js'
 class LaporanController {
   static async rekapGerai(req, res, next) {
     try {
-      const geraiList = await GeraiModel.find({ aktif: true }).sort({ kode: 1 })
-      const paidOrders = await PesananModel.find({
-        status: { $in: ['siap_dibuat', 'selesai'] },
+      const geraiList = await GeraiModel.findMany({
+        where: { aktif: true },
+        orderBy: { kode: 'asc' },
+      })
+      const paidOrders = await PesananModel.findMany({
+        where: {
+          status: { in: ['siap_dibuat', 'selesai'] },
+        },
+        include: { items: true },
       })
 
       const todayLabel = new Date().toISOString().slice(0, 10)
@@ -31,8 +37,9 @@ class LaporanController {
           const kodeGerai = item.idGerai || order.idGerai
           if (kodeGerai && rekapMap[kodeGerai]) {
             rekapMap[kodeGerai].totalPorsi += item.jumlah || 1
-            rekapMap[kodeGerai].totalOmzet += item.subtotal || (item.hargaSaatItu * (item.jumlah || 1))
-            orderSetsPerGerai[kodeGerai].add(order._id.toString())
+            rekapMap[kodeGerai].totalOmzet +=
+              item.subtotal || item.hargaSaatItu * (item.jumlah || 1)
+            orderSetsPerGerai[kodeGerai].add(String(order.id))
           }
         }
       }
@@ -54,7 +61,9 @@ class LaporanController {
 
   static async ringkasan(req, res, next) {
     try {
-      const allOrders = await PesananModel.find()
+      const allOrders = await PesananModel.findMany({
+        select: { status: true, total: true },
+      })
 
       let omzetHariIni = 0
       let totalTransaksi = 0

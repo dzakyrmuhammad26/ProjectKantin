@@ -1,4 +1,3 @@
-import mongoose from 'mongoose'
 import GeraiModel from '../models/gerai.model.js'
 import MenuModel from '../models/menu.model.js'
 import {
@@ -8,32 +7,42 @@ import {
 } from '../schemas/menuSchema.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
-const findMenuFilter = (idOrKode) => {
-  if (mongoose.Types.ObjectId.isValid(idOrKode)) {
-    return { _id: idOrKode }
+const findMenuByIdOrKode = async (idOrKode) => {
+  if (/^\d+$/.test(String(idOrKode))) {
+    const id = Number(idOrKode)
+    if (Number.isSafeInteger(id) && id > 0) {
+      return await MenuModel.findUnique({ where: { id } })
+    }
   }
-  return { kode: idOrKode.toUpperCase() }
+  return await MenuModel.findUnique({ where: { kode: String(idOrKode).toUpperCase() } })
 }
 
 class MenuController {
   static async index(req, res, next) {
     try {
-      const filter = {}
-      if (req.query.idGerai) filter.idGerai = req.query.idGerai
-      if (req.query.kategori) filter.kategori = req.query.kategori
-      if (req.query.isHabis !== undefined) filter.isHabis = req.query.isHabis === 'true'
+      const where = {}
+      if (req.query.idGerai) where.idGerai = req.query.idGerai
+      if (req.query.kategori) where.kategori = req.query.kategori
+      if (req.query.isHabis !== undefined) where.isHabis = req.query.isHabis === 'true'
       if (req.query.aktif !== undefined) {
-        filter.aktif = req.query.aktif === 'true'
+        where.aktif = req.query.aktif === 'true'
       } else {
-        filter.aktif = true
+        where.aktif = true
       }
 
       if (req.query.search) {
-        const regex = new RegExp(req.query.search, 'i')
-        filter.$or = [{ nama: regex }, { kode: regex }]
+        const search = String(req.query.search).trim()
+        where.OR = [
+          { nama: { contains: search } },
+          { kode: { contains: search } },
+        ]
       }
 
-      const listMenu = await MenuModel.find(filter).sort({ urutan: 1, createdAt: -1 })
+      const listMenu = await MenuModel.findMany({
+        where,
+        orderBy: [{ urutan: 'asc' }, { createdAt: 'desc' }],
+      })
+
       return apiResponse({
         res,
         status: 200,
@@ -47,10 +56,13 @@ class MenuController {
 
   static async byGerai(req, res, next) {
     try {
-      const listMenu = await MenuModel.find({
-        idGerai: req.params.idGerai,
-        aktif: true,
-      }).sort({ urutan: 1, createdAt: -1 })
+      const listMenu = await MenuModel.findMany({
+        where: {
+          idGerai: req.params.idGerai,
+          aktif: true,
+        },
+        orderBy: [{ urutan: 'asc' }, { createdAt: 'desc' }],
+      })
 
       return apiResponse({
         res,
@@ -65,7 +77,7 @@ class MenuController {
 
   static async show(req, res, next) {
     try {
-      const menu = await MenuModel.findOne(findMenuFilter(req.params.id))
+      const menu = await findMenuByIdOrKode(req.params.id)
       if (!menu) {
         return apiResponse({
           res,
@@ -93,21 +105,27 @@ class MenuController {
 
     try {
       const data = { ...result.data }
+      if (data.foto === null || data.foto === undefined) {
+        delete data.foto
+      }
 
-      // Lengkapi namaGerai otomatis dari database jika tidak dikirim
+      const gerai = await GeraiModel.findUnique({
+        where: { kode: data.idGerai.toUpperCase() },
+      })
+      if (!gerai) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: `Gerai dengan kode ${data.idGerai} tidak ditemukan`,
+        })
+      }
+
+      data.idGerai = gerai.kode
       if (!data.namaGerai) {
-        const gerai = await GeraiModel.findOne({ kode: data.idGerai.toUpperCase() })
-        if (!gerai) {
-          return apiResponse({
-            res,
-            status: 404,
-            message: `Gerai dengan kode ${data.idGerai} tidak ditemukan`,
-          })
-        }
         data.namaGerai = gerai.nama
       }
 
-      const newMenu = await MenuModel.create(data)
+      const newMenu = await MenuModel.create({ data })
       return apiResponse({
         res,
         status: 201,
@@ -126,19 +144,24 @@ class MenuController {
     }
 
     try {
-      const updated = await MenuModel.findOneAndUpdate(
-        findMenuFilter(req.params.id),
-        result.data,
-        { returnDocument: 'after', runValidators: true },
-      )
-
-      if (!updated) {
+      const existing = await findMenuByIdOrKode(req.params.id)
+      if (!existing) {
         return apiResponse({
           res,
           status: 404,
           message: 'Menu tidak ditemukan',
         })
       }
+
+      const data = { ...result.data }
+      if (data.foto === null) {
+        delete data.foto
+      }
+
+      const updated = await MenuModel.update({
+        where: { id: existing.id },
+        data,
+      })
 
       return apiResponse({
         res,
@@ -158,7 +181,7 @@ class MenuController {
     }
 
     try {
-      const menu = await MenuModel.findOne(findMenuFilter(req.params.id))
+      const menu = await findMenuByIdOrKode(req.params.id)
       if (!menu) {
         return apiResponse({
           res,
@@ -167,22 +190,25 @@ class MenuController {
         })
       }
 
-      // Jika body kosong, toggle isHabis secara otomatis
+      const updates = {}
       if (Object.keys(result.data).length === 0) {
-        menu.isHabis = !menu.isHabis
+        updates.isHabis = !menu.isHabis
       } else {
-        if (result.data.isHabis !== undefined) menu.isHabis = result.data.isHabis
-        if (result.data.aktif !== undefined) menu.aktif = result.data.aktif
-        if (result.data.isFavorit !== undefined) menu.isFavorit = result.data.isFavorit
+        if (result.data.isHabis !== undefined) updates.isHabis = result.data.isHabis
+        if (result.data.aktif !== undefined) updates.aktif = result.data.aktif
+        if (result.data.isFavorit !== undefined) updates.isFavorit = result.data.isFavorit
       }
 
-      await menu.save()
+      const updated = await MenuModel.update({
+        where: { id: menu.id },
+        data: updates,
+      })
 
       return apiResponse({
         res,
         status: 200,
         message: 'Status menu berhasil diperbarui',
-        data: menu,
+        data: updated,
       })
     } catch (error) {
       return next(error)
@@ -191,16 +217,17 @@ class MenuController {
 
   static async delete(req, res, next) {
     try {
-      const filter = findMenuFilter(req.params.id)
+      const existing = await findMenuByIdOrKode(req.params.id)
+      if (!existing) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: 'Menu tidak ditemukan',
+        })
+      }
+
       if (req.query.permanent === 'true') {
-        const deleted = await MenuModel.findOneAndDelete(filter)
-        if (!deleted) {
-          return apiResponse({
-            res,
-            status: 404,
-            message: 'Menu tidak ditemukan',
-          })
-        }
+        await MenuModel.delete({ where: { id: existing.id } })
         return apiResponse({
           res,
           status: 200,
@@ -208,19 +235,10 @@ class MenuController {
         })
       }
 
-      const deactivated = await MenuModel.findOneAndUpdate(
-        filter,
-        { aktif: false },
-        { returnDocument: 'after' },
-      )
-
-      if (!deactivated) {
-        return apiResponse({
-          res,
-          status: 404,
-          message: 'Menu tidak ditemukan',
-        })
-      }
+      const deactivated = await MenuModel.update({
+        where: { id: existing.id },
+        data: { aktif: false },
+      })
 
       return apiResponse({
         res,

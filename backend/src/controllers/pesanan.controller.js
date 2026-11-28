@@ -1,4 +1,5 @@
-import mongoose from 'mongoose'
+import { prisma } from '../config/database.js'
+import GeraiModel from '../models/gerai.model.js'
 import MenuModel from '../models/menu.model.js'
 import PesananModel from '../models/pesanan.model.js'
 import SesiModel from '../models/sesi.model.js'
@@ -9,35 +10,57 @@ import {
 } from '../schemas/pesananSchema.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
-const findPesananFilter = (idOrCode) => {
-  if (mongoose.Types.ObjectId.isValid(idOrCode)) {
-    return { _id: idOrCode }
+const PESANAN_INCLUDE = {
+  items: true,
+  pembayaran: true,
+}
+
+const findPesananByIdOrCode = async (idOrCode) => {
+  if (/^\d+$/.test(String(idOrCode))) {
+    const id = Number(idOrCode)
+    if (Number.isSafeInteger(id) && id > 0) {
+      return await PesananModel.findUnique({
+        where: { id },
+        include: PESANAN_INCLUDE,
+      })
+    }
   }
-  return { idPesanan: idOrCode }
+  return await PesananModel.findUnique({
+    where: { idPesanan: String(idOrCode) },
+    include: PESANAN_INCLUDE,
+  })
 }
 
 const findMenuByIdOrCode = async (idMenu) => {
-  if (mongoose.Types.ObjectId.isValid(idMenu)) {
-    return await MenuModel.findById(idMenu)
+  if (/^\d+$/.test(String(idMenu))) {
+    const id = Number(idMenu)
+    if (Number.isSafeInteger(id) && id > 0) {
+      return await MenuModel.findUnique({ where: { id } })
+    }
   }
-  return await MenuModel.findOne({ kode: idMenu.toUpperCase() })
+  return await MenuModel.findUnique({ where: { kode: String(idMenu).toUpperCase() } })
 }
 
 class PesananController {
   static async index(req, res, next) {
     try {
-      const filter = {}
-      if (req.query.nomorKartu) filter.nomorKartu = String(req.query.nomorKartu)
-      if (req.query.idSesi) filter.idSesi = req.query.idSesi
-      if (req.query.status) filter.status = req.query.status
+      const where = {}
+      if (req.query.nomorKartu) where.nomorKartu = String(req.query.nomorKartu)
+      if (req.query.idSesi) where.idSesi = req.query.idSesi
+      if (req.query.status) where.status = req.query.status
       if (req.query.idGerai) {
-        filter.$or = [
+        where.OR = [
           { idGerai: req.query.idGerai },
-          { 'items.idGerai': req.query.idGerai },
+          { items: { some: { idGerai: req.query.idGerai } } },
         ]
       }
 
-      const listPesanan = await PesananModel.find(filter).sort({ waktuPesan: -1 })
+      const listPesanan = await PesananModel.findMany({
+        where,
+        include: PESANAN_INCLUDE,
+        orderBy: { waktuPesan: 'desc' },
+      })
+
       return apiResponse({
         res,
         status: 200,
@@ -51,9 +74,11 @@ class PesananController {
 
   static async byKartu(req, res, next) {
     try {
-      const listPesanan = await PesananModel.find({
-        nomorKartu: String(req.params.nomorKartu),
-      }).sort({ waktuPesan: -1 })
+      const listPesanan = await PesananModel.findMany({
+        where: { nomorKartu: String(req.params.nomorKartu) },
+        include: PESANAN_INCLUDE,
+        orderBy: { waktuPesan: 'desc' },
+      })
 
       return apiResponse({
         res,
@@ -69,9 +94,13 @@ class PesananController {
   static async byGerai(req, res, next) {
     try {
       const idGerai = req.params.idGerai
-      const listPesanan = await PesananModel.find({
-        $or: [{ idGerai }, { 'items.idGerai': idGerai }],
-      }).sort({ waktuPesan: -1 })
+      const listPesanan = await PesananModel.findMany({
+        where: {
+          OR: [{ idGerai }, { items: { some: { idGerai } } }],
+        },
+        include: PESANAN_INCLUDE,
+        orderBy: { waktuPesan: 'desc' },
+      })
 
       return apiResponse({
         res,
@@ -86,9 +115,11 @@ class PesananController {
 
   static async bySesi(req, res, next) {
     try {
-      const listPesanan = await PesananModel.find({
-        idSesi: req.params.idSesi,
-      }).sort({ waktuPesan: -1 })
+      const listPesanan = await PesananModel.findMany({
+        where: { idSesi: req.params.idSesi },
+        include: PESANAN_INCLUDE,
+        orderBy: { waktuPesan: 'desc' },
+      })
 
       return apiResponse({
         res,
@@ -103,7 +134,7 @@ class PesananController {
 
   static async show(req, res, next) {
     try {
-      const pesanan = await PesananModel.findOne(findPesananFilter(req.params.id))
+      const pesanan = await findPesananByIdOrCode(req.params.id)
       if (!pesanan) {
         return apiResponse({
           res,
@@ -142,6 +173,31 @@ class PesananController {
         items,
       } = result.data
 
+      if (idSesi) {
+        const sesiExists = await SesiModel.findUnique({ where: { idSesi } })
+        if (!sesiExists) {
+          return apiResponse({
+            res,
+            status: 404,
+            message: `Sesi '${idSesi}' tidak ditemukan`,
+          })
+        }
+      }
+
+      let resolvedGeraiCode = idGerai ? idGerai.toUpperCase() : null
+      let resolvedGeraiName = namaGerai || null
+      if (resolvedGeraiCode) {
+        const geraiExists = await GeraiModel.findUnique({ where: { kode: resolvedGeraiCode } })
+        if (!geraiExists) {
+          return apiResponse({
+            res,
+            status: 404,
+            message: `Gerai '${resolvedGeraiCode}' tidak ditemukan`,
+          })
+        }
+        resolvedGeraiName = resolvedGeraiName || geraiExists.nama
+      }
+
       const normalizedItems = []
       let calculatedTotal = 0
 
@@ -167,7 +223,8 @@ class PesananController {
         calculatedTotal += subtotal
 
         normalizedItems.push({
-          idMenu: menu._id.toString(),
+          menuId: menu.id,
+          idMenu: String(menu.id),
           namaMenu: menu.nama,
           idGerai: menu.idGerai,
           namaGerai: menu.namaGerai,
@@ -178,30 +235,44 @@ class PesananController {
         })
       }
 
+      if (!resolvedGeraiCode && normalizedItems.length === 1) {
+        resolvedGeraiCode = normalizedItems[0].idGerai
+        resolvedGeraiName = resolvedGeraiName || normalizedItems[0].namaGerai
+      }
+
       const randomCode = Math.floor(1000 + Math.random() * 9000)
       const generatedId = idPesanan || `TRX-${nomorKartu}${randomCode}`
 
-      const newPesanan = await PesananModel.create({
-        idPesanan: generatedId,
-        idSesi: idSesi || null,
-        nomorKartu,
-        nomorMeja: nomorMeja ?? null,
-        idGerai: idGerai || (normalizedItems.length === 1 ? normalizedItems[0].idGerai : null),
-        namaGerai: namaGerai || (normalizedItems.length === 1 ? normalizedItems[0].namaGerai : null),
-        status: 'menunggu_bayar',
-        sumber,
-        items: normalizedItems,
-        total: calculatedTotal,
-        catatan: catatan || '',
-        waktuPesan: new Date(),
-      })
+      const newPesanan = await prisma.$transaction(async (tx) => {
+        const created = await tx.pesanan.create({
+          data: {
+            idPesanan: generatedId,
+            idSesi: idSesi || null,
+            nomorKartu,
+            nomorMeja: nomorMeja ?? null,
+            idGerai: resolvedGeraiCode,
+            namaGerai: resolvedGeraiName,
+            status: 'menunggu_bayar',
+            sumber,
+            total: calculatedTotal,
+            catatan: catatan || '',
+            waktuPesan: new Date(),
+            items: {
+              create: normalizedItems,
+            },
+          },
+          include: PESANAN_INCLUDE,
+        })
 
-      if (idSesi) {
-        await SesiModel.findOneAndUpdate(
-          { idSesi },
-          { $inc: { totalTagihan: calculatedTotal } },
-        )
-      }
+        if (idSesi) {
+          await tx.sesi.updateMany({
+            where: { idSesi },
+            data: { totalTagihan: { increment: calculatedTotal } },
+          })
+        }
+
+        return created
+      })
 
       return apiResponse({
         res,
@@ -231,19 +302,20 @@ class PesananController {
     }
 
     try {
-      const updated = await PesananModel.findOneAndUpdate(
-        findPesananFilter(req.params.id),
-        { status: result.data.status },
-        { returnDocument: 'after' },
-      )
-
-      if (!updated) {
+      const existing = await findPesananByIdOrCode(req.params.id)
+      if (!existing) {
         return apiResponse({
           res,
           status: 404,
           message: 'Pesanan tidak ditemukan',
         })
       }
+
+      const updated = await PesananModel.update({
+        where: { id: existing.id },
+        data: { status: result.data.status },
+        include: PESANAN_INCLUDE,
+      })
 
       return apiResponse({
         res,
@@ -263,6 +335,15 @@ class PesananController {
     }
 
     try {
+      const existing = await findPesananByIdOrCode(req.params.id)
+      if (!existing) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: 'Pesanan tidak ditemukan',
+        })
+      }
+
       const normalizedItems = []
       let calculatedTotal = 0
 
@@ -280,7 +361,8 @@ class PesananController {
         calculatedTotal += subtotal
 
         normalizedItems.push({
-          idMenu: menu._id.toString(),
+          menuId: menu.id,
+          idMenu: String(menu.id),
           namaMenu: menu.nama,
           idGerai: menu.idGerai,
           namaGerai: menu.namaGerai,
@@ -291,19 +373,22 @@ class PesananController {
         })
       }
 
-      const updated = await PesananModel.findOneAndUpdate(
-        findPesananFilter(req.params.id),
-        { items: normalizedItems, total: calculatedTotal },
-        { returnDocument: 'after' },
-      )
-
-      if (!updated) {
-        return apiResponse({
-          res,
-          status: 404,
-          message: 'Pesanan tidak ditemukan',
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.itemPesanan.deleteMany({
+          where: { pesananId: existing.id },
         })
-      }
+
+        return await tx.pesanan.update({
+          where: { id: existing.id },
+          data: {
+            total: calculatedTotal,
+            items: {
+              create: normalizedItems,
+            },
+          },
+          include: PESANAN_INCLUDE,
+        })
+      })
 
       return apiResponse({
         res,
@@ -318,19 +403,20 @@ class PesananController {
 
   static async batal(req, res, next) {
     try {
-      const updated = await PesananModel.findOneAndUpdate(
-        findPesananFilter(req.params.id),
-        { status: 'batal' },
-        { returnDocument: 'after' },
-      )
-
-      if (!updated) {
+      const existing = await findPesananByIdOrCode(req.params.id)
+      if (!existing) {
         return apiResponse({
           res,
           status: 404,
           message: 'Pesanan tidak ditemukan',
         })
       }
+
+      const updated = await PesananModel.update({
+        where: { id: existing.id },
+        data: { status: 'batal' },
+        include: PESANAN_INCLUDE,
+      })
 
       return apiResponse({
         res,

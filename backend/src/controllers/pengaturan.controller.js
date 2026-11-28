@@ -5,9 +5,13 @@ import { apiResponse, apiResponseValidation } from '../utils/response.js'
 class PengaturanController {
   static async index(req, res, next) {
     try {
-      let pengaturan = await PengaturanModel.findOne()
+      let pengaturan = await PengaturanModel.findFirst()
       if (!pengaturan) {
-        pengaturan = await PengaturanModel.create({})
+        pengaturan = await PengaturanModel.create({
+          data: {
+            metodeBayarAktif: ['tunai', 'qris', 'debit'],
+          },
+        })
       }
 
       return apiResponse({
@@ -28,15 +32,19 @@ class PengaturanController {
     }
 
     try {
-      let pengaturan = await PengaturanModel.findOne()
+      let pengaturan = await PengaturanModel.findFirst()
       if (!pengaturan) {
-        pengaturan = await PengaturanModel.create(result.data)
+        pengaturan = await PengaturanModel.create({
+          data: {
+            metodeBayarAktif: ['tunai', 'qris', 'debit'],
+            ...result.data,
+          },
+        })
       } else {
-        pengaturan = await PengaturanModel.findByIdAndUpdate(
-          pengaturan._id,
-          result.data,
-          { returnDocument: 'after', runValidators: true },
-        )
+        pengaturan = await PengaturanModel.update({
+          where: { id: pengaturan.id },
+          data: result.data,
+        })
       }
 
       return apiResponse({
