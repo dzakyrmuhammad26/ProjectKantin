@@ -15,7 +15,8 @@ export const createGeraiSchema = z.object({
   penyewa: z
     .string({ required_error: 'Nama penyewa wajib diisi' })
     .trim()
-    .min(2, 'Nama penyewa minimal 2 karakter'),
+    .min(2, 'Nama penyewa minimal 2 karakter')
+    .max(100, 'Nama penyewa maksimal 100 karakter'),
   warna: z
     .string()
     .trim()

@@ -20,10 +20,11 @@ export const createMenuSchema = z.object({
   idGerai: z
     .string({ required_error: 'ID Gerai wajib diisi' })
     .trim()
-    .min(1, 'ID Gerai tidak boleh kosong'),
-  namaGerai: z.string().trim().optional(),
+    .min(1, 'ID Gerai tidak boleh kosong')
+    .max(10, 'ID Gerai maksimal 10 karakter'),
+  namaGerai: z.string().trim().max(100, 'Nama gerai maksimal 100 karakter').optional(),
   kategori: z.enum(KATEGORI_MENU).default('makanan'),
-  foto: z.string().trim().optional().nullable(),
+  foto: z.string().trim().max(500, 'URL foto maksimal 500 karakter').optional().nullable(),
   urutan: z.number().int().positive().optional().default(99),
   isFavorit: z.boolean().optional().default(false),
   isHabis: z.boolean().optional().default(false),

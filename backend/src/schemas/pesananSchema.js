@@ -2,10 +2,10 @@ import { z } from 'zod'
 import { ORDER_STATUS_LIST, ORDER_SOURCE_LIST } from '../constants/orderStatus.js'
 
 export const itemPesananSchema = z.object({
-  idMenu: z.string({ required_error: 'ID Menu wajib ada' }),
-  namaMenu: z.string().optional(),
-  idGerai: z.string().optional().nullable(),
-  namaGerai: z.string().optional().nullable(),
+  idMenu: z.string({ required_error: 'ID Menu wajib ada' }).max(50, 'ID Menu maksimal 50 karakter'),
+  namaMenu: z.string().max(100, 'Nama menu maksimal 100 karakter').optional(),
+  idGerai: z.string().max(10, 'ID Gerai maksimal 10 karakter').optional().nullable(),
+  namaGerai: z.string().max(100, 'Nama gerai maksimal 100 karakter').optional().nullable(),
   jumlah: z
     .number({ required_error: 'Jumlah wajib diisi' })
     .int('Jumlah harus bulat')
@@ -16,7 +16,7 @@ export const itemPesananSchema = z.object({
 })
 
 export const createPesananSchema = z.object({
-  idPesanan: z.string().trim().optional(),
+  idPesanan: z.string().trim().max(50, 'ID Pesanan maksimal 50 karakter').optional(),
   nomorKartu: z
     .string({ required_error: 'Nomor kartu wajib diisi' })
     .trim()
@@ -27,6 +27,7 @@ export const createPesananSchema = z.object({
   namaGerai: z.string().trim().optional().nullable(),
   idSesi: z.string().trim().optional().nullable(),
   sumber: z.enum(ORDER_SOURCE_LIST).optional().default('pelanggan'),
+  langsungMasak: z.boolean().optional().default(false),
   catatan: z.string().max(255).optional().nullable(),
   total: z.number().int().nonnegative().optional(),
   items: z
@@ -38,6 +39,7 @@ export const updateStatusPesananSchema = z.object({
   status: z.enum(ORDER_STATUS_LIST, {
     required_error: 'Status baru wajib diisi',
   }),
+  idGerai: z.string().trim().max(10).optional().nullable(),
 })
 
 export const updateItemsPesananSchema = z.object({

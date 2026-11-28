@@ -2,6 +2,7 @@ import { prisma } from '../config/database.js'
 import PembayaranModel from '../models/pembayaran.model.js'
 import { prosesPembayaranSchema } from '../schemas/pembayaranSchema.js'
 import { AppError } from '../utils/appError.js'
+import { syncPesananState } from '../utils/orderSync.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
 const buildOrderWhere = (idOrCode) => {
@@ -103,6 +104,15 @@ class PembayaranController {
           if (!order) {
             throw new AppError(`Pesanan dengan ID ${targetId} tidak ditemukan`, 404)
           }
+          if (order.status === 'batal') {
+            throw new AppError(
+              `Pesanan '${order.idPesanan}' sudah dibatalkan dan tidak dapat dibayar`,
+              400,
+            )
+          }
+          if (order.pembayaranId !== null) {
+            throw new AppError(`Pesanan '${order.idPesanan}' sudah lunas dibayar`, 400)
+          }
 
           targetOrders.push(order)
         }
@@ -141,15 +151,24 @@ class PembayaranController {
 
         const orders = []
         for (const order of targetOrders) {
-          const updated = await tx.pesanan.update({
+          await tx.pesanan.update({
             where: { id: order.id },
             data: {
-              status: 'siap_dibuat',
               pembayaranId: createdPayment.id,
             },
-            include: { items: true, pembayaran: true },
           })
-          orders.push(updated)
+
+          // Majukan item yang masih menunggu_bayar ke siap_dibuat; biarkan yang sudah selesai/batal tetap
+          await tx.itemPesanan.updateMany({
+            where: {
+              pesananId: order.id,
+              statusItem: 'menunggu_bayar',
+            },
+            data: { statusItem: 'siap_dibuat' },
+          })
+
+          const syncedOrder = await syncPesananState(tx, order.id)
+          orders.push(syncedOrder)
         }
 
         return { pembayaran: createdPayment, updatedOrders: orders }

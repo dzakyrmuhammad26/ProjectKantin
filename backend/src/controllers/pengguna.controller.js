@@ -157,7 +157,11 @@ class PenggunaController {
       }
 
       const updates = { ...result.data }
-      if (updates.idGerai) {
+      const targetPeran = updates.peran ?? existing.peran
+
+      if (targetPeran !== 'gerai') {
+        updates.idGerai = null
+      } else if (updates.idGerai) {
         const gerai = await GeraiModel.findUnique({ where: { kode: updates.idGerai.toUpperCase() } })
         if (!gerai) {
           return apiResponse({

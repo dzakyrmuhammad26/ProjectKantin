@@ -6,6 +6,7 @@ import {
   updateMenuSchema,
 } from '../schemas/menuSchema.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
+import { deleteImageByUrl } from '../utils/storage.js'
 
 const findMenuByIdOrKode = async (idOrKode) => {
   if (/^\d+$/.test(String(idOrKode))) {
@@ -15,6 +16,12 @@ const findMenuByIdOrKode = async (idOrKode) => {
     }
   }
   return await MenuModel.findUnique({ where: { kode: String(idOrKode).toUpperCase() } })
+}
+
+const hasGeraiOwnership = (req, targetIdGerai) => {
+  if (req.user?.peran !== 'gerai') return true
+  if (!req.user.idGerai || !targetIdGerai) return false
+  return req.user.idGerai.toUpperCase() === String(targetIdGerai).toUpperCase()
 }
 
 class MenuController {
@@ -109,6 +116,14 @@ class MenuController {
         delete data.foto
       }
 
+      if (!hasGeraiOwnership(req, data.idGerai)) {
+        return apiResponse({
+          res,
+          status: 403,
+          message: 'Akses ditolak: Anda hanya dapat menambah menu untuk gerai Anda sendiri',
+        })
+      }
+
       const gerai = await GeraiModel.findUnique({
         where: { kode: data.idGerai.toUpperCase() },
       })
@@ -153,15 +168,52 @@ class MenuController {
         })
       }
 
+      if (!hasGeraiOwnership(req, existing.idGerai)) {
+        return apiResponse({
+          res,
+          status: 403,
+          message: 'Akses ditolak: Anda hanya dapat mengubah menu milik gerai Anda sendiri',
+        })
+      }
+
       const data = { ...result.data }
       if (data.foto === null) {
         delete data.foto
+      }
+
+      if (data.idGerai) {
+        if (!hasGeraiOwnership(req, data.idGerai)) {
+          return apiResponse({
+            res,
+            status: 403,
+            message: 'Akses ditolak: Tidak dapat memindahkan menu ke gerai lain',
+          })
+        }
+
+        const targetGerai = await GeraiModel.findUnique({
+          where: { kode: data.idGerai.toUpperCase() },
+        })
+        if (!targetGerai) {
+          return apiResponse({
+            res,
+            status: 404,
+            message: `Gerai dengan kode ${data.idGerai} tidak ditemukan`,
+          })
+        }
+        data.idGerai = targetGerai.kode
+        if (!data.namaGerai) {
+          data.namaGerai = targetGerai.nama
+        }
       }
 
       const updated = await MenuModel.update({
         where: { id: existing.id },
         data,
       })
+
+      if (data.foto && existing.foto && data.foto !== existing.foto) {
+        deleteImageByUrl(existing.foto).catch(() => {})
+      }
 
       return apiResponse({
         res,
@@ -187,6 +239,14 @@ class MenuController {
           res,
           status: 404,
           message: 'Menu tidak ditemukan',
+        })
+      }
+
+      if (!hasGeraiOwnership(req, menu.idGerai)) {
+        return apiResponse({
+          res,
+          status: 403,
+          message: 'Akses ditolak: Anda hanya dapat mengubah status menu milik gerai Anda sendiri',
         })
       }
 
@@ -226,8 +286,17 @@ class MenuController {
         })
       }
 
+      if (!hasGeraiOwnership(req, existing.idGerai)) {
+        return apiResponse({
+          res,
+          status: 403,
+          message: 'Akses ditolak: Anda hanya dapat menghapus menu milik gerai Anda sendiri',
+        })
+      }
+
       if (req.query.permanent === 'true') {
         await MenuModel.delete({ where: { id: existing.id } })
+        deleteImageByUrl(existing.foto).catch(() => {})
         return apiResponse({
           res,
           status: 200,

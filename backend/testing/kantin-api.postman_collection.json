@@ -416,7 +416,36 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengguna",
+              "host": ["{{baseUrl}}"],
+              "path": ["pengguna"]
+            }
+          }
+        },
+        {
+          "name": "GET /pengguna - Forbidden Kasir (Negative 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pengguna",
               "host": ["{{baseUrl}}"],
@@ -446,7 +475,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pengguna?peran=kasir&aktif=true",
               "host": ["{{baseUrl}}"],
@@ -591,7 +622,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pengguna/{{createdUserId}}",
               "host": ["{{baseUrl}}"],
@@ -616,7 +649,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pengguna/{{notFoundObjectId}}",
               "host": ["{{baseUrl}}"],
@@ -1120,6 +1155,34 @@
           }
         },
         {
+          "name": "DELETE /gerai/G01?permanent=true - Blocked Has Menus (Negative 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/gerai/{{geraiKode}}?permanent=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["gerai", "{{geraiKode}}"],
+              "query": [{ "key": "permanent", "value": "true" }]
+            }
+          }
+        },
+        {
           "name": "DELETE /gerai/:id?permanent=true - Permanent Delete Cleanup",
           "event": [
             {
@@ -1407,6 +1470,38 @@
               "raw": "{{baseUrl}}/menu",
               "host": ["{{baseUrl}}"],
               "path": ["menu"]
+            }
+          }
+        },
+        {
+          "name": "PUT /menu/G02-001 - Forbidden Other Gerai G01 (Negative 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{geraiToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"harga\": 1000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/menu/G02-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["menu", "G02-001"]
             }
           }
         },
@@ -1752,7 +1847,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/sesi?status=aktif",
               "host": ["{{baseUrl}}"],
@@ -2052,7 +2149,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nomorKartu\": \"{{testNomorKartu}}\",\n  \"idSesi\": \"{{createdSesiId}}\",\n  \"sumber\": \"pelanggan\",\n  \"items\": [\n    {\n      \"idMenu\": \"{{menuMinumanKode}}\",\n      \"jumlah\": 1\n    }\n  ]\n}"
+              "raw": "{\n  \"nomorKartu\": \"{{testNomorKartu}}\",\n  \"idSesi\": \"{{createdSesiId}}\",\n  \"sumber\": \"pelanggan\",\n  \"items\": [\n    {\n      \"idMenu\": \"G01-002\",\n      \"jumlah\": 1\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/pesanan",
@@ -2082,7 +2179,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pesanan?status=menunggu_bayar",
               "host": ["{{baseUrl}}"],
@@ -2137,11 +2236,40 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{geraiToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pesanan/gerai/{{geraiKode}}",
               "host": ["{{baseUrl}}"],
               "path": ["pesanan", "gerai", "{{geraiKode}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /pesanan/gerai/G02 - Forbidden Gerai G01 (Negative 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{geraiToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pesanan/gerai/G02",
+              "host": ["{{baseUrl}}"],
+              "path": ["pesanan", "gerai", "G02"]
             }
           }
         },
@@ -2275,6 +2403,10 @@
                   "    const json = pm.response.json();",
                   "    pm.expect(json.data.total).to.eql(31000);",
                   "    pm.environment.set('createdPesananTotal', json.data.total);",
+                  "    const itemG01 = json.data.items.find(i => i.idGerai === 'G01');",
+                  "    const itemG04 = json.data.items.find(i => i.idGerai === 'G04');",
+                  "    pm.environment.set('itemG01Id', itemG01.id);",
+                  "    pm.environment.set('itemG04Id', itemG04.id);",
                   "});"
                 ]
               }
@@ -2357,6 +2489,35 @@
               "raw": "{{baseUrl}}/pesanan/{{cancelPesananId}}/batal",
               "host": ["{{baseUrl}}"],
               "path": ["pesanan", "{{cancelPesananId}}", "batal"]
+            }
+          }
+        },
+        {
+          "name": "GET /sesi/:id - Verify totalTagihan Synced After Edit & Cancel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Session totalTagihan equals active order total (31000)', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.totalTagihan).to.eql(31000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sesi/{{createdSesiId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sesi", "{{createdSesiId}}"]
             }
           }
         }
@@ -2466,6 +2627,38 @@
           }
         },
         {
+          "name": "POST /pembayaran - Pesanan Batal (Negative 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idPesanan\": \"{{cancelPesananId}}\",\n  \"metode\": \"qris\",\n  \"totalTagihan\": 22000,\n  \"uangDiterima\": 22000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pembayaran",
+              "host": ["{{baseUrl}}"],
+              "path": ["pembayaran"]
+            }
+          }
+        },
+        {
           "name": "POST /pembayaran - Proses Pembayaran Tunai (Kasir)",
           "event": [
             {
@@ -2504,7 +2697,39 @@
           }
         },
         {
-          "name": "PATCH /pesanan/:id/status - Selesaikan Pesanan (Gerai)",
+          "name": "POST /pembayaran - Double Payment (Negative 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idPesanan\": \"{{createdPesananId}}\",\n  \"idSesi\": \"{{createdSesiId}}\",\n  \"metode\": \"tunai\",\n  \"totalTagihan\": {{createdPesananTotal}},\n  \"uangDiterima\": 50000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pembayaran",
+              "host": ["{{baseUrl}}"],
+              "path": ["pembayaran"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /pesanan/:id/status - Selesaikan Item G01 Saja (Gerai G01)",
           "event": [
             {
               "listen": "test",
@@ -2514,9 +2739,13 @@
                   "pm.test('Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Order status updated to selesai', function () {",
+                  "pm.test('G01 item is selesai, G04 item still siap_dibuat, order header stays siap_dibuat', function () {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.data.status).to.eql('selesai');",
+                  "    const itemG01 = json.data.items.find(i => i.idGerai === 'G01');",
+                  "    const itemG04 = json.data.items.find(i => i.idGerai === 'G04');",
+                  "    pm.expect(itemG01.statusItem).to.eql('selesai');",
+                  "    pm.expect(itemG04.statusItem).to.eql('siap_dibuat');",
+                  "    pm.expect(json.data.status).to.eql('siap_dibuat');",
                   "});"
                 ]
               }
@@ -2536,6 +2765,192 @@
               "raw": "{{baseUrl}}/pesanan/{{createdPesananId}}/status",
               "host": ["{{baseUrl}}"],
               "path": ["pesanan", "{{createdPesananId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /pesanan/:id/items/:itemId/status - Forbidden G01 on G04 Item (Negative 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{geraiToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"selesai\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pesanan/{{createdPesananId}}/items/{{itemG04Id}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["pesanan", "{{createdPesananId}}", "items", "{{itemG04Id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /pesanan/:id/items/:itemId/status - Selesaikan Item G04 (Superadmin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('All items selesai -> aggregate order status automatically becomes selesai', function () {",
+                  "    const json = pm.response.json();",
+                  "    const itemG04 = json.data.items.find(i => i.idGerai === 'G04');",
+                  "    pm.expect(itemG04.statusItem).to.eql('selesai');",
+                  "    pm.expect(json.data.status).to.eql('selesai');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"selesai\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pesanan/{{createdPesananId}}/items/{{itemG04Id}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["pesanan", "{{createdPesananId}}", "items", "{{itemG04Id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "POST /pesanan - Direct Order by Kasir (sumber kasir)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('sumber is kasir and status menunggu_bayar', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.sumber).to.eql('kasir');",
+                  "    pm.expect(json.data.status).to.eql('menunggu_bayar');",
+                  "    pm.environment.set('kasirOrderId', json.data.idPesanan);",
+                  "    pm.environment.set('kasirOrderTotal', json.data.total);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomorKartu\": \"{{testNomorKartu}}\",\n  \"idSesi\": \"{{createdSesiId}}\",\n  \"sumber\": \"kasir\",\n  \"items\": [\n    { \"idMenu\": \"G01-003\", \"jumlah\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pesanan",
+              "host": ["{{baseUrl}}"],
+              "path": ["pesanan"]
+            }
+          }
+        },
+        {
+          "name": "POST /pesanan - Gerai Langsung Masak Sebelum Bayar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Item is already siap_dibuat while header order stays menunggu_bayar', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.sumber).to.eql('gerai');",
+                  "    pm.expect(json.data.status).to.eql('menunggu_bayar');",
+                  "    pm.expect(json.data.items[0].statusItem).to.eql('siap_dibuat');",
+                  "    pm.environment.set('geraiDirectOrderId', json.data.idPesanan);",
+                  "    pm.environment.set('geraiDirectTotal', json.data.total);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{geraiToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomorKartu\": \"{{testNomorKartu}}\",\n  \"idSesi\": \"{{createdSesiId}}\",\n  \"sumber\": \"gerai\",\n  \"langsungMasak\": true,\n  \"items\": [\n    { \"idMenu\": \"G01-003\", \"jumlah\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pesanan",
+              "host": ["{{baseUrl}}"],
+              "path": ["pesanan"]
+            }
+          }
+        },
+        {
+          "name": "POST /pembayaran - Bayar Multi Pesanan Kasir & Gerai (QRIS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Both orders transition to siap_dibuat cleanly', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.pesanan).to.be.an('array').with.lengthOf(2);",
+                  "    json.data.pesanan.forEach(p => pm.expect(p.status).to.eql('siap_dibuat'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idPesananList\": [\"{{kasirOrderId}}\", \"{{geraiDirectOrderId}}\"],\n  \"idSesi\": \"{{createdSesiId}}\",\n  \"metode\": \"qris\",\n  \"totalTagihan\": 36000,\n  \"uangDiterima\": 36000,\n  \"referensiQris\": \"QRIS-NEWMAN-001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pembayaran",
+              "host": ["{{baseUrl}}"],
+              "path": ["pembayaran"]
             }
           }
         },
@@ -2593,7 +3008,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pembayaran?metode=tunai",
               "host": ["{{baseUrl}}"],
@@ -2623,7 +3040,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pembayaran/{{createdPembayaranId}}",
               "host": ["{{baseUrl}}"],
@@ -2648,7 +3067,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/pembayaran/{{notFoundObjectId}}",
               "host": ["{{baseUrl}}"],
@@ -2662,7 +3083,34 @@
       "name": "09. Laporan",
       "item": [
         {
-          "name": "GET /laporan/rekap-gerai - Daily Stall Recap",
+          "name": "GET /laporan/rekap-gerai - Forbidden Kasir (Negative 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{kasirToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/laporan/rekap-gerai",
+              "host": ["{{baseUrl}}"],
+              "path": ["laporan", "rekap-gerai"]
+            }
+          }
+        },
+        {
+          "name": "GET /laporan/rekap-gerai - Daily Stall Recap (Superadmin)",
           "event": [
             {
               "listen": "test",
@@ -2683,7 +3131,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/laporan/rekap-gerai",
               "host": ["{{baseUrl}}"],
@@ -2692,7 +3142,35 @@
           }
         },
         {
-          "name": "GET /laporan/ringkasan - Dashboard Summary",
+          "name": "GET /laporan/ringkasan?tanggal=invalid - Validation Error (Negative 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Validation Error', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/laporan/ringkasan?tanggal=28-11-2026",
+              "host": ["{{baseUrl}}"],
+              "path": ["laporan", "ringkasan"],
+              "query": [{ "key": "tanggal", "value": "28-11-2026" }]
+            }
+          }
+        },
+        {
+          "name": "GET /laporan/ringkasan - Dashboard Summary (Superadmin)",
           "event": [
             {
               "listen": "test",
@@ -2702,9 +3180,9 @@
                   "pm.test('Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Summary has required KPI fields', function () {",
+                  "pm.test('Summary has required KPI fields and payment breakdown', function () {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.data).to.include.keys('omzetHariIni', 'totalTransaksi', 'totalPelangganAktif', 'rataRataPerTransaksi');",
+                  "    pm.expect(json.data).to.include.keys('tanggal', 'omzetHariIni', 'totalTransaksi', 'totalPelangganAktif', 'rataRataPerTransaksi', 'totalSesiAktif', 'totalPesananSelesai', 'rincianMetodeBayar');",
                   "    pm.expect(json.data.omzetHariIni).to.be.a('number').and.at.least(31000);",
                   "});"
                 ]
@@ -2713,7 +3191,9 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{superadminToken}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/laporan/ringkasan",
               "host": ["{{baseUrl}}"],

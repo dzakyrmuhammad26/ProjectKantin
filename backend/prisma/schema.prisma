@@ -156,17 +156,18 @@ model Pesanan {
 }
 
 model ItemPesanan {
-  id           Int     @id @default(autoincrement())
+  id           Int           @id @default(autoincrement())
   pesananId    Int
   menuId       Int?
-  idMenu       String  @db.VarChar(50)
-  namaMenu     String  @db.VarChar(100)
-  idGerai      String? @db.VarChar(10)
-  namaGerai    String? @db.VarChar(100)
+  idMenu       String        @db.VarChar(50)
+  namaMenu     String        @db.VarChar(100)
+  idGerai      String?       @db.VarChar(10)
+  namaGerai    String?       @db.VarChar(100)
   hargaSaatItu Int
   jumlah       Int
   subtotal     Int
-  catatan      String  @default("") @db.VarChar(255)
+  catatan      String        @default("") @db.VarChar(255)
+  statusItem   StatusPesanan @default(menunggu_bayar)
 
   pesanan Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
   menu    Menu?   @relation(fields: [menuId], references: [id], onUpdate: Cascade, onDelete: SetNull)
@@ -175,6 +176,7 @@ model ItemPesanan {
   @@index([pesananId])
   @@index([menuId])
   @@index([idGerai])
+  @@index([statusItem])
   @@map("item_pesanan")
 }
 

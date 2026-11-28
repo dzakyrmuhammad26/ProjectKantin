@@ -125,3 +125,25 @@ export const deleteMenuImage = async ({ publicId, provider } = {}) => {
     throw error
   }
 }
+
+/**
+ * Menghapus file gambar hasil upload berdasarkan URL tersimpan di database.
+ * Aman dipanggil untuk URL statis/placeholder (diabaikan tanpa error).
+ */
+export const deleteImageByUrl = async (url) => {
+  if (!url || typeof url !== 'string') return false
+
+  if (url.includes('/uploads/menu/')) {
+    const filename = path.basename(url.split('?')[0])
+    return await deleteMenuImage({ publicId: filename, provider: 'local' })
+  }
+
+  if (url.includes('res.cloudinary.com') && isCloudinaryConfigured()) {
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z0-9]+$/i)
+    if (match?.[1]) {
+      return await deleteMenuImage({ publicId: match[1], provider: 'cloudinary' })
+    }
+  }
+
+  return false
+}

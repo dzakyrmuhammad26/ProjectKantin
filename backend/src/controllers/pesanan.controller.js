@@ -8,11 +8,19 @@ import {
   updateItemsPesananSchema,
   updateStatusPesananSchema,
 } from '../schemas/pesananSchema.js'
+import { syncPesananState } from '../utils/orderSync.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
 const PESANAN_INCLUDE = {
   items: true,
   pembayaran: true,
+}
+
+const STATUS_MAP = {
+  pending_payment: 'menunggu_bayar',
+  ready_to_prepare: 'siap_dibuat',
+  completed: 'selesai',
+  cancelled: 'batal',
 }
 
 const findPesananByIdOrCode = async (idOrCode) => {
@@ -41,6 +49,16 @@ const findMenuByIdOrCode = async (idMenu) => {
   return await MenuModel.findUnique({ where: { kode: String(idMenu).toUpperCase() } })
 }
 
+const hasGeraiOrderAccess = (req, order) => {
+  if (req.user?.peran !== 'gerai') return true
+  if (!req.user.idGerai) return false
+  const userGerai = req.user.idGerai.toUpperCase()
+  if (order.idGerai && order.idGerai.toUpperCase() === userGerai) return true
+  return (order.items || []).some(
+    (item) => item.idGerai && item.idGerai.toUpperCase() === userGerai,
+  )
+}
+
 class PesananController {
   static async index(req, res, next) {
     try {
@@ -48,10 +66,16 @@ class PesananController {
       if (req.query.nomorKartu) where.nomorKartu = String(req.query.nomorKartu)
       if (req.query.idSesi) where.idSesi = req.query.idSesi
       if (req.query.status) where.status = req.query.status
-      if (req.query.idGerai) {
+
+      const effectiveGerai =
+        req.user?.peran === 'gerai' && req.user.idGerai
+          ? req.user.idGerai
+          : req.query.idGerai
+
+      if (effectiveGerai) {
         where.OR = [
-          { idGerai: req.query.idGerai },
-          { items: { some: { idGerai: req.query.idGerai } } },
+          { idGerai: effectiveGerai },
+          { items: { some: { idGerai: effectiveGerai } } },
         ]
       }
 
@@ -94,6 +118,17 @@ class PesananController {
   static async byGerai(req, res, next) {
     try {
       const idGerai = req.params.idGerai
+      if (
+        req.user?.peran === 'gerai' &&
+        (!req.user.idGerai || req.user.idGerai.toUpperCase() !== idGerai.toUpperCase())
+      ) {
+        return apiResponse({
+          res,
+          status: 403,
+          message: 'Akses ditolak: Anda hanya dapat melihat antrean gerai Anda sendiri',
+        })
+      }
+
       const listPesanan = await PesananModel.findMany({
         where: {
           OR: [{ idGerai }, { items: { some: { idGerai } } }],
@@ -169,6 +204,7 @@ class PesananController {
         namaGerai,
         idSesi,
         sumber,
+        langsungMasak,
         catatan,
         items,
       } = result.data
@@ -198,6 +234,11 @@ class PesananController {
         resolvedGeraiName = resolvedGeraiName || geraiExists.nama
       }
 
+      const initialItemStatus =
+        langsungMasak && (req.user?.peran === 'gerai' || req.user?.peran === 'superadmin')
+          ? 'siap_dibuat'
+          : 'menunggu_bayar'
+
       const normalizedItems = []
       let calculatedTotal = 0
 
@@ -218,6 +259,16 @@ class PesananController {
           })
         }
 
+        if (req.user?.peran === 'gerai' && sumber === 'gerai') {
+          if (!req.user.idGerai || menu.idGerai !== req.user.idGerai) {
+            return apiResponse({
+              res,
+              status: 403,
+              message: `Akses ditolak: Menu '${menu.nama}' bukan milik gerai Anda`,
+            })
+          }
+        }
+
         const hargaSaatItu = menu.harga
         const subtotal = hargaSaatItu * item.jumlah
         calculatedTotal += subtotal
@@ -232,6 +283,7 @@ class PesananController {
           jumlah: item.jumlah,
           subtotal,
           catatan: item.catatan || '',
+          statusItem: initialItemStatus,
         })
       }
 
@@ -264,14 +316,7 @@ class PesananController {
           include: PESANAN_INCLUDE,
         })
 
-        if (idSesi) {
-          await tx.sesi.updateMany({
-            where: { idSesi },
-            data: { totalTagihan: { increment: calculatedTotal } },
-          })
-        }
-
-        return created
+        return await syncPesananState(tx, created.id)
       })
 
       return apiResponse({
@@ -286,15 +331,9 @@ class PesananController {
   }
 
   static async updateStatus(req, res, next) {
-    const statusMap = {
-      pending_payment: 'menunggu_bayar',
-      ready_to_prepare: 'siap_dibuat',
-      completed: 'selesai',
-      cancelled: 'batal',
-    }
     const normalizedBody = {
       ...req.body,
-      status: statusMap[req.body?.status] || req.body?.status,
+      status: STATUS_MAP[req.body?.status] || req.body?.status,
     }
     const result = updateStatusPesananSchema.safeParse(normalizedBody)
     if (!result.success) {
@@ -311,16 +350,107 @@ class PesananController {
         })
       }
 
-      const updated = await PesananModel.update({
-        where: { id: existing.id },
-        data: { status: result.data.status },
-        include: PESANAN_INCLUDE,
+      if (!hasGeraiOrderAccess(req, existing)) {
+        return apiResponse({
+          res,
+          status: 403,
+          message: 'Akses ditolak: Anda hanya dapat mengubah status pesanan untuk gerai Anda',
+        })
+      }
+
+      const nextStatus = result.data.status
+      const targetGeraiFilter =
+        req.user?.peran === 'gerai'
+          ? req.user.idGerai
+          : result.data.idGerai || null
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const itemWhere = {
+          pesananId: existing.id,
+          statusItem: { not: 'batal' },
+          ...(targetGeraiFilter && { idGerai: targetGeraiFilter }),
+        }
+
+        await tx.itemPesanan.updateMany({
+          where: itemWhere,
+          data: { statusItem: nextStatus },
+        })
+
+        return await syncPesananState(tx, existing.id)
       })
 
       return apiResponse({
         res,
         status: 200,
         message: 'Status pesanan berhasil diperbarui',
+        data: updated,
+      })
+    } catch (error) {
+      return next(error)
+    }
+  }
+
+  static async updateItemStatus(req, res, next) {
+    const normalizedBody = {
+      ...req.body,
+      status: STATUS_MAP[req.body?.status] || req.body?.status,
+    }
+    const result = updateStatusPesananSchema.safeParse(normalizedBody)
+    if (!result.success) {
+      return apiResponseValidation({ res, errors: result.error })
+    }
+
+    try {
+      const existing = await findPesananByIdOrCode(req.params.id)
+      if (!existing) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: 'Pesanan tidak ditemukan',
+        })
+      }
+
+      if (!/^\d+$/.test(String(req.params.itemId))) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: 'Item pesanan tidak ditemukan',
+        })
+      }
+
+      const itemId = Number(req.params.itemId)
+      const targetItem = existing.items.find((item) => item.id === itemId)
+      if (!targetItem) {
+        return apiResponse({
+          res,
+          status: 404,
+          message: 'Item pesanan tidak ditemukan pada pesanan ini',
+        })
+      }
+
+      if (req.user?.peran === 'gerai') {
+        if (!req.user.idGerai || targetItem.idGerai !== req.user.idGerai) {
+          return apiResponse({
+            res,
+            status: 403,
+            message: 'Akses ditolak: Item pesanan ini bukan milik gerai Anda',
+          })
+        }
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.itemPesanan.update({
+          where: { id: itemId },
+          data: { statusItem: result.data.status },
+        })
+
+        return await syncPesananState(tx, existing.id)
+      })
+
+      return apiResponse({
+        res,
+        status: 200,
+        message: 'Status item pesanan berhasil diperbarui',
         data: updated,
       })
     } catch (error) {
@@ -341,6 +471,22 @@ class PesananController {
           res,
           status: 404,
           message: 'Pesanan tidak ditemukan',
+        })
+      }
+
+      if (existing.pembayaranId !== null) {
+        return apiResponse({
+          res,
+          status: 400,
+          message: 'Pesanan yang sudah dibayar tidak dapat diubah itemnya',
+        })
+      }
+
+      if (existing.status === 'batal') {
+        return apiResponse({
+          res,
+          status: 400,
+          message: 'Pesanan yang sudah dibatalkan tidak dapat diubah itemnya',
         })
       }
 
@@ -370,6 +516,7 @@ class PesananController {
           jumlah: item.jumlah,
           subtotal,
           catatan: item.catatan || '',
+          statusItem: 'menunggu_bayar',
         })
       }
 
@@ -378,7 +525,7 @@ class PesananController {
           where: { pesananId: existing.id },
         })
 
-        return await tx.pesanan.update({
+        await tx.pesanan.update({
           where: { id: existing.id },
           data: {
             total: calculatedTotal,
@@ -386,8 +533,9 @@ class PesananController {
               create: normalizedItems,
             },
           },
-          include: PESANAN_INCLUDE,
         })
+
+        return await syncPesananState(tx, existing.id)
       })
 
       return apiResponse({
@@ -412,10 +560,29 @@ class PesananController {
         })
       }
 
-      const updated = await PesananModel.update({
-        where: { id: existing.id },
-        data: { status: 'batal' },
-        include: PESANAN_INCLUDE,
+      if (!hasGeraiOrderAccess(req, existing)) {
+        return apiResponse({
+          res,
+          status: 403,
+          message: 'Akses ditolak: Anda hanya dapat membatalkan pesanan untuk gerai Anda',
+        })
+      }
+
+      const targetGeraiFilter =
+        req.user?.peran === 'gerai'
+          ? req.user.idGerai
+          : req.body?.idGerai || null
+
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.itemPesanan.updateMany({
+          where: {
+            pesananId: existing.id,
+            ...(targetGeraiFilter && { idGerai: targetGeraiFilter }),
+          },
+          data: { statusItem: 'batal' },
+        })
+
+        return await syncPesananState(tx, existing.id)
       })
 
       return apiResponse({

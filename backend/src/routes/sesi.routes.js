@@ -1,11 +1,11 @@
 import express from 'express'
 import SesiController from '../controllers/sesi.controller.js'
-import { authorizeRoles } from '../middlewares/auth.js'
+import { authenticateJwt, authorizeRoles } from '../middlewares/auth.js'
 
 const router = express.Router()
 
-// GET terbuka tanpa JWT
-router.get('/', SesiController.index)
+// List seluruh sesi khusus superadmin / kasir; cek aktif kartu & detail sesi tetap terbuka untuk kiosk
+router.get('/', authenticateJwt, authorizeRoles('superadmin', 'kasir'), SesiController.index)
 router.get('/aktif/:nomorKartu', SesiController.aktifByKartu)
 router.get('/:id', SesiController.show)
 

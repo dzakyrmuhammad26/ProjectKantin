@@ -1,3 +1,4 @@
+import UserModel from '../models/user.model.js'
 import { verifyToken } from '../utils/jwt.js'
 import { apiResponse } from '../utils/response.js'
 
@@ -37,10 +38,41 @@ export const authenticateJwt = async (req, res, next) => {
     return apiResponse({ res, status: 401, message: 'Token tidak valid' })
   }
 
+  if (decoded.peran !== 'pelanggan') {
+    const userId = Number(decoded.sub)
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return apiResponse({ res, status: 401, message: 'Token tidak valid' })
+    }
+
+    try {
+      const activeUser = await UserModel.findUnique({
+        where: { id: userId },
+        select: { id: true, peran: true, idGerai: true, aktif: true },
+      })
+
+      if (!activeUser || !activeUser.aktif) {
+        return apiResponse({
+          res,
+          status: 401,
+          message: 'Akun tidak aktif atau sudah tidak terdaftar, silakan login kembali',
+        })
+      }
+
+      req.user = {
+        id: String(activeUser.id),
+        peran: activeUser.peran,
+        idGerai: activeUser.idGerai || null,
+      }
+      return next()
+    } catch (error) {
+      return next(error)
+    }
+  }
+
   req.user = {
     id: decoded.sub,
     peran: decoded.peran,
-    idGerai: decoded.idGerai || null,
+    idGerai: null,
   }
   return next()
 }

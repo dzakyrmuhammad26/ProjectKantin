@@ -1,4 +1,6 @@
+import { prisma } from '../config/database.js'
 import GeraiModel from '../models/gerai.model.js'
+import MenuModel from '../models/menu.model.js'
 import { createGeraiSchema, updateGeraiSchema } from '../schemas/geraiSchema.js'
 import { apiResponse, apiResponseValidation } from '../utils/response.js'
 
@@ -95,9 +97,28 @@ class GeraiController {
         })
       }
 
-      const updated = await GeraiModel.update({
-        where: { id: existing.id },
-        data: result.data,
+      const updated = await prisma.$transaction(async (tx) => {
+        const updatedGerai = await tx.gerai.update({
+          where: { id: existing.id },
+          data: result.data,
+        })
+
+        if (result.data.nama && result.data.nama !== existing.nama) {
+          await tx.menu.updateMany({
+            where: { idGerai: updatedGerai.kode },
+            data: { namaGerai: updatedGerai.nama },
+          })
+          await tx.pesanan.updateMany({
+            where: { idGerai: updatedGerai.kode },
+            data: { namaGerai: updatedGerai.nama },
+          })
+          await tx.itemPesanan.updateMany({
+            where: { idGerai: updatedGerai.kode },
+            data: { namaGerai: updatedGerai.nama },
+          })
+        }
+
+        return updatedGerai
       })
 
       return apiResponse({
@@ -123,6 +144,17 @@ class GeraiController {
       }
 
       if (req.query.permanent === 'true') {
+        const menuCount = await MenuModel.count({
+          where: { idGerai: existing.kode },
+        })
+        if (menuCount > 0) {
+          return apiResponse({
+            res,
+            status: 400,
+            message: `Gerai '${existing.nama}' masih memiliki ${menuCount} menu terdaftar. Hapus menu atau nonaktifkan gerai terlebih dahulu`,
+          })
+        }
+
         await GeraiModel.delete({ where: { id: existing.id } })
         return apiResponse({
           res,
